@@ -2726,8 +2726,8 @@ mod tests {
     #[test]
     fn indic_canary_languages_are_known_and_named_but_not_offered_for_whisper() {
         let all_indic = [
-            "as", "bhb", "bho", "bn", "brx", "doi", "en", "gu", "hi", "kn", "kok", "ks", "mai",
-            "ml", "mni", "mr", "ne", "or", "pa", "sa", "sat", "sd", "ta", "te", "ur",
+            "as", "bgc", "bhb", "bho", "bn", "brx", "doi", "en", "gu", "hi", "hne", "kn", "kok",
+            "ks", "mai", "ml", "mni", "mr", "ne", "or", "pa", "sa", "sat", "sd", "ta", "te", "ur",
         ];
         for code in all_indic {
             assert!(is_known_language(code), "{code} should be known");

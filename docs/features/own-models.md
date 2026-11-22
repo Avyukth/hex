@@ -9,12 +9,13 @@ didn't pin.
 
 ## Add A Model File
 
-Canary imports (`stt.variant: indic-transcribe-core`) are imported from disk or
-the Hugging Face cache rather than downloaded from Hex's catalog: the upstream
-`bodhan-ai/indic-transcribe-core` weights are gated under the Indic Open Model
-License v1.0 (derived from `nvidia/canary-1b-v2`, CC BY 4.0). Hex pins a
+Canary imports (`stt.variant: indic-transcribe-core` / `indic-transcribe-flex`)
+are imported from disk or the Hugging Face cache rather than downloaded from
+Hex's catalog: the upstream Bodhan AI weights are gated under the Indic Open
+Model License v1.0 (derived from `nvidia/canary-1b-v2`, CC BY 4.0). Hex pins a
 `transcribe.cpp` revision (`hex/indic-canary`) that supports Canary's `indic`
-prompt format.
+prompt format, ITN mixed-script mode (`<|itn|>` / `stt.canary.default_mode`),
+and `-Latn` romanized output.
 
 ```ts
 Picker header -> "Add model file…" -> native dialog (GGUF, All files)   // setup.custom-models

@@ -50,11 +50,12 @@ strip = true
 # its keep-alive runs out (branch hex/metal-idle-residency), Fluid Speech
 # Pro's pre-Conformer encoder block (branch hex/fluid-pre-block),
 # upstream's Parakeet padding-frame fix (branch hex/nemo-padding-frame), and
-# Indic-Transcribe Core's Canary `indic` prompt format (branch hex/indic-canary).
+# Indic-Transcribe's Canary `indic` prompt, ITN mixed-script, `default_mode`,
+# and `-Latn` romanized output modes (branch hex/indic-canary).
 # Drop this once a transcribe.cpp release carries them.
 [patch.crates-io]
-transcribe-cpp = { git = "https://github.com/Avyukth/transcribe.cpp", rev = "d21828dca41be2b0dcde6b8684d8e39fc9d2cc3d" }
-transcribe-cpp-sys = { git = "https://github.com/Avyukth/transcribe.cpp", rev = "d21828dca41be2b0dcde6b8684d8e39fc9d2cc3d" }
+transcribe-cpp = { git = "https://github.com/Avyukth/transcribe.cpp", rev = "85a86cc5b29165febdf0611f6a483eb87388870b" }
+transcribe-cpp-sys = { git = "https://github.com/Avyukth/transcribe.cpp", rev = "85a86cc5b29165febdf0611f6a483eb87388870b" }
 # The crates Rune patches in its own workspace (Rune's README, "Depending on
 # Rune"): a dependency's `[patch]` never reaches the workspace that depends on
 # it, and without these Hex builds against stock winit, sctk-adwaita,

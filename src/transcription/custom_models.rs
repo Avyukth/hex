@@ -1465,8 +1465,8 @@ mod tests {
     #[test]
     fn a_canary_header_with_indic_languages_is_accepted_and_takes_a_hint() {
         let all_indic = [
-            "as", "bhb", "bho", "bn", "brx", "doi", "en", "gu", "hi", "kn", "kok", "ks", "mai",
-            "ml", "mni", "mr", "ne", "or", "pa", "sa", "sat", "sd", "ta", "te", "ur",
+            "as", "bgc", "bhb", "bho", "bn", "brx", "doi", "en", "gu", "hi", "hne", "kn", "kok",
+            "ks", "mai", "ml", "mni", "mr", "ne", "or", "pa", "sa", "sat", "sd", "ta", "te", "ur",
         ];
         let header = gguf_header::tests::read_header(gguf(
             &[
