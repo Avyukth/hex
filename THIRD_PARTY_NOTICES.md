@@ -157,6 +157,21 @@ Notice supplied with the files:
 
 The weights are provided as-is, without warranties, as the licence states.
 
+## Noto Sans Indic Fonts
+
+The Indic script fallback fonts in `assets/fonts/` (`NotoSansDevanagari`,
+`NotoSansBengali`, `NotoSansTamil`, `NotoSansTelugu`, `NotoSansKannada`,
+`NotoSansMalayalam`, `NotoSansGujarati`, `NotoSansGurmukhi`, `NotoSansOriya`,
+`NotoSansMeeteiMayek`, and `NotoSansOlChiki`) are unmodified upstream Google
+Noto Sans variable font binaries from the Noto Project
+(https://github.com/notofonts).
+
+Each font is licensed under the SIL Open Font License, Version 1.1 (OFL-1.1).
+The complete license text and copyright notice for each face are preserved
+alongside its binary in `assets/fonts/*-OFL.txt`.
+
+License: https://scripts.sil.org/OFL
+
 ## Wayland Input Method Protocol
 
 `src/linux/protocols/input-method-unstable-v2.xml` is the upstream

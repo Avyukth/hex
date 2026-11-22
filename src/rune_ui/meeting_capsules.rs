@@ -1570,7 +1570,10 @@ mod tests {
         let (commands, received) = mpsc::sync_channel(4);
         let chosen = Chosen::default();
         let saved = chosen.clone();
-        let text = TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES);
+        let text = TextSystem::new(
+            crate::rune_ui::fonts::FONTS,
+            crate::rune_ui::fonts::FAMILIES,
+        );
         let presentation = offer_surface::Presentation::for_kind(&kind, more_open);
         let size = if matches!(kind, Kind::Offer(..)) {
             presentation.window()
