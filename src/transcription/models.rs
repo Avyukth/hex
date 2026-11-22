@@ -22,7 +22,11 @@ use super::artifacts::{
     UNDERDOG_BARK_3_CLEAN_ARTIFACT, UNDERDOG_BARK_3_PRO_ARTIFACT, WHISPER_ARTIFACT,
 };
 pub use super::custom_models::CustomModelId;
-pub use super::languages::{LANGUAGES, language_name, menu_order};
+#[cfg(test)]
+use super::languages::INDIC_CANARY_LANGUAGES;
+use super::languages::is_whisper_language;
+pub(crate) use super::languages::known_language;
+pub use super::languages::{LANGUAGES, is_known_language, language_name, menu_order};
 pub(crate) use super::model_benchmarks::most_accurate_is_comparable;
 pub use super::model_benchmarks::{BenchmarkRecord, benchmark};
 
@@ -290,8 +294,10 @@ impl ModelDefinition {
     pub fn supports_language(&self, language: &str) -> bool {
         if language == AUTO_LANGUAGE {
             self.supports_language_detection
+        } else if self.languages.contains(&"*") {
+            self.id != TranscriptionModelId::WhisperLargeV3Turbo || is_whisper_language(language)
         } else {
-            self.languages.contains(&"*") || self.languages.contains(&language)
+            self.languages.contains(&language)
         }
     }
 
@@ -847,33 +853,6 @@ pub(crate) fn picker_models(
                 .map(|model| (model, None)),
         )
         .collect()
-}
-
-/// Whisper large-v3's language codes, for its `"*"` catalog entry: the local
-/// API accepts these beyond the languages Settings lists.
-const WHISPER_LANGUAGES: &[&str] = &[
-    "en", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr", "pl", "ca", "nl", "ar", "sv", "it",
-    "id", "hi", "fi", "vi", "he", "uk", "el", "ms", "cs", "ro", "da", "hu", "ta", "no", "th", "ur",
-    "hr", "bg", "lt", "la", "mi", "ml", "cy", "sk", "te", "fa", "lv", "bn", "sr", "az", "sl", "kn",
-    "et", "mk", "br", "eu", "is", "hy", "ne", "mn", "bs", "kk", "sq", "sw", "gl", "mr", "pa", "si",
-    "km", "sn", "yo", "so", "af", "oc", "ka", "be", "tg", "sd", "gu", "am", "yi", "lo", "uz", "fo",
-    "ht", "ps", "tk", "nn", "mt", "sa", "lb", "my", "bo", "tl", "mg", "as", "tt", "haw", "ln",
-    "ha", "ba", "jw", "su", "yue",
-];
-
-/// Whether `language` is a code Hex knows: one Settings lists, or one of
-/// Whisper's, which only models that accept any language support.
-pub fn is_known_language(language: &str) -> bool {
-    known_language(language).is_some()
-}
-
-/// `language` as Hex's own `'static` code, when Hex knows it.
-pub(crate) fn known_language(language: &str) -> Option<&'static str> {
-    LANGUAGES
-        .iter()
-        .map(|(code, _)| *code)
-        .chain(WHISPER_LANGUAGES.iter().copied())
-        .find(|code| *code == language)
 }
 
 /// Whether a saved selection stays saved: one `validate` accepts, or an
@@ -2742,5 +2721,31 @@ mod tests {
         assert_eq!(max_audio_chunk_samples("whisper", 30_000), Some(480_000));
         assert_eq!(max_audio_chunk_samples("whisper", 45_000), Some(480_000));
         assert_eq!(max_audio_chunk_samples("whisper", 20_000), Some(320_000));
+    }
+
+    #[test]
+    fn indic_canary_languages_are_known_and_named_but_not_offered_for_whisper() {
+        let all_indic = [
+            "as", "bhb", "bho", "bn", "brx", "doi", "en", "gu", "hi", "kn", "kok", "ks", "mai",
+            "ml", "mni", "mr", "ne", "or", "pa", "sa", "sat", "sd", "ta", "te", "ur",
+        ];
+        for code in all_indic {
+            assert!(is_known_language(code), "{code} should be known");
+            assert_ne!(
+                language_name(code),
+                code,
+                "{code} should have a display name"
+            );
+        }
+        let whisper = definition(TranscriptionModelId::WhisperLargeV3Turbo);
+        for code in INDIC_CANARY_LANGUAGES {
+            assert!(
+                !whisper.supports_language(code),
+                "Whisper must not claim Canary-only language {code}"
+            );
+        }
+        assert!(whisper.supports_language("hi"));
+        assert!(whisper.supports_language("ta"));
+        assert!(whisper.supports_language("fil"));
     }
 }

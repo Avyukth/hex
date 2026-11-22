@@ -171,7 +171,7 @@ const TOP_FROM: f32 = 0.7;
 
 thread_local! {
     static TEXT: RefCell<rune::text::TextSystem> = RefCell::new(
-        rune::text::TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES),
+        rune::text::TextSystem::new(crate::rune_ui::fonts::FONTS, crate::rune_ui::fonts::FAMILIES),
     );
 }
 
