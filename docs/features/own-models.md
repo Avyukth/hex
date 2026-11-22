@@ -12,10 +12,9 @@ didn't pin.
 Canary imports (`stt.variant: indic-transcribe-core`) are imported from disk or
 the Hugging Face cache rather than downloaded from Hex's catalog: the upstream
 `bodhan-ai/indic-transcribe-core` weights are gated under the Indic Open Model
-License v1.0 (derived from `nvidia/canary-1b-v2`, CC BY 4.0). Live decoding
-requires a `transcribe.cpp` build with the Canary `indic` prompt format; the
-pinned upstream revision accepts the GGUF header but does not decode the
-`indic` prompt variant yet.
+License v1.0 (derived from `nvidia/canary-1b-v2`, CC BY 4.0). Hex pins a
+`transcribe.cpp` revision (`hex/indic-canary`) that supports Canary's `indic`
+prompt format.
 
 ```ts
 Picker header -> "Add model file…" -> native dialog (GGUF, All files)   // setup.custom-models
