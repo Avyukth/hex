@@ -111,7 +111,59 @@ const OTHER_LANGUAGES: &[(&str, &str)] = &[
     ("ba", "Bashkir"),
     ("jw", "Javanese"),
     ("su", "Sundanese"),
+    // Indic-Transcribe (Canary) languages that Whisper does not name.
+    ("bho", "Bhojpuri"),
+    ("bhb", "Bhili"),
+    ("brx", "Bodo"),
+    ("doi", "Dogri"),
+    ("kok", "Konkani"),
+    ("ks", "Kashmiri"),
+    ("mai", "Maithili"),
+    ("mni", "Manipuri"),
+    ("or", "Odia"),
+    ("sat", "Santali"),
 ];
+
+/// Whisper large-v3's language codes, for its `"*"` catalog entry: the local
+/// API accepts these beyond the languages Settings lists.
+const WHISPER_LANGUAGES: &[&str] = &[
+    "en", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr", "pl", "ca", "nl", "ar", "sv", "it",
+    "id", "hi", "fi", "vi", "he", "uk", "el", "ms", "cs", "ro", "da", "hu", "ta", "no", "th", "ur",
+    "hr", "bg", "lt", "la", "mi", "ml", "cy", "sk", "te", "fa", "lv", "bn", "sr", "az", "sl", "kn",
+    "et", "mk", "br", "eu", "is", "hy", "ne", "mn", "bs", "kk", "sq", "sw", "gl", "mr", "pa", "si",
+    "km", "sn", "yo", "so", "af", "oc", "ka", "be", "tg", "sd", "gu", "am", "yi", "lo", "uz", "fo",
+    "ht", "ps", "tk", "nn", "mt", "sa", "lb", "my", "bo", "tl", "mg", "as", "tt", "haw", "ln",
+    "ha", "ba", "jw", "su", "yue",
+];
+
+/// Indic-Transcribe Canary codes that neither Settings' list nor Whisper
+/// names. They are valid for Canary imports only; keeping them out of
+/// `WHISPER_LANGUAGES` avoids offering them for Whisper.
+pub(super) const INDIC_CANARY_LANGUAGES: &[&str] = &[
+    "bho", "bhb", "brx", "doi", "kok", "ks", "mai", "mni", "or", "sat",
+];
+
+/// Whether `language` is accepted by Whisper large-v3-turbo (a Settings
+/// language or one of Whisper's own codes, never a Canary-only code).
+pub(super) fn is_whisper_language(language: &str) -> bool {
+    is_listed(language) || WHISPER_LANGUAGES.contains(&language)
+}
+
+/// Whether `language` is a code Hex knows: one Settings lists, one of
+/// Whisper's, or one used by a Canary import.
+pub fn is_known_language(language: &str) -> bool {
+    known_language(language).is_some()
+}
+
+/// `language` as Hex's own `'static` code, when Hex knows it.
+pub(crate) fn known_language(language: &str) -> Option<&'static str> {
+    LANGUAGES
+        .iter()
+        .map(|(code, _)| *code)
+        .chain(WHISPER_LANGUAGES.iter().copied())
+        .chain(INDIC_CANARY_LANGUAGES.iter().copied())
+        .find(|code| *code == language)
+}
 
 /// Whether Settings lists `code` for every model that supports it.
 pub(crate) fn is_listed(code: &str) -> bool {
