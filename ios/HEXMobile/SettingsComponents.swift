@@ -278,10 +278,17 @@ enum SettingsSnapshotFixture {
         let args = ProcessInfo.processInfo.arguments
         keyboard.hexKeyOnLeft = args.firstIndex(of: FullKeyboardSettings.hexKeyLaunchArgument)
             .flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } == "left"
+        keyboard.numberRow = on
         keyboard.autocorrect = true
         keyboard.spatialAutocorrect = true
         keyboard.germanSpatialAutocorrect = on
+        keyboard.koreanKeyboard = on
+        keyboard.dvorakPunctuation = on
+        keyboard.commaPeriodKeys = on
+        keyboard.quickAccents = on
         keyboard.emojiLettersUnderEmojiKey = on
+        keyboard.keyboardThemesEnabled = false
+        keyboard.keyboardTheme = .automatic
         keyboard.suggestSwearWords = on
         keyboard.keyPopups = true
         keyboard.haptics = true
@@ -307,6 +314,8 @@ enum SettingsSnapshotFixture {
         TypingJournalSettings().learnsPerLanguage = on
         TypingLogSettings().isEnabled = on
         HinglishSettings().isEnabled = on
+        GreeklishSettings().isEnabled = on
+        TwoLanguageDictationSettings().isEnabled = on
         AdaptiveTouchSettings().isEnabled = on
         // Settings scenes skip preparing a model, so this only draws the switch.
         MultilingualParakeetSettings().isEnabled = on

@@ -41,6 +41,11 @@ final class FullKeyboardView: UIView {
     let callout = KeyCalloutView()
     let accentCallout = AccentCalloutView()
     let hexKey = HexKeyControl()
+    /// A theme's own opaque panel behind every key and the strip, at the glass panel's own
+    /// frame and top corners (`KeyboardThemePanelView`): this view's own background stays
+    /// clear, since filling its whole rect would draw square corners over the app. Hidden
+    /// under Automatic, which leaves iOS's glass exactly as it was.
+    let themePanel = KeyboardThemePanelView()
     let globeButton = UIButton(type: .custom)
     /// The capsule that grows from the Hex mark across the strip into the recording bar.
     private let morph = UIView()
@@ -57,6 +62,8 @@ final class FullKeyboardView: UIView {
     private var barHoldTouch: UITouch?
     private var barHoldWork: DispatchWorkItem?
     private var lastDictation: DictationUndo?
+    /// The globe's touch went off the key before lifting (`globeTouch`).
+    private var globeTouchLeftKey = false
     /// The model's stage last seen, for a selection's dictation ending
     /// (`FullKeyboardView+Selection`).
     var lastStagePhase: KeyboardViewModel.StagePhase?
@@ -71,8 +78,8 @@ final class FullKeyboardView: UIView {
     var vocabularyOffer: String?
     private var undoHideWork: DispatchWorkItem?
     /// The Hex key was tapped without Full Access: the strip says what dictation needs.
-    private(set) var showsFullAccessHint = false
-    private var fullAccessHintHideWork: DispatchWorkItem?
+    var showsFullAccessHint = false
+    var fullAccessHintHideWork: DispatchWorkItem?
     /// How long the Full Access hint stays unless a key or the strip is used first.
     static let fullAccessHintDuration: TimeInterval = 8
     private let haptics = UIImpactFeedbackGenerator(style: .light)
@@ -103,15 +110,19 @@ final class FullKeyboardView: UIView {
         }
     }
     private let selectionHaptics = UISelectionFeedbackGenerator()
-    private let clipboard = KeyboardClipboardTracker()
+    let clipboard = KeyboardClipboardTracker()
     /// What the strip's Paste chip offers now.
-    private var stripOffer: KeyboardClipboardOffer?
+    var stripOffer: KeyboardClipboardOffer?
     /// Settings › Experiments › Hide word suggestions: the strip keeps its height, chips,
     /// status and notices but shows no words (`refreshStrip`).
     private var hidesWordSuggestions = false
+    /// Settings › Experiments › Keyboard themes: Automatic keeps iOS's glass; another theme
+    /// paints the keyboard's own colours. Read again by `syncSettings`, which rebuilds the
+    /// palette when it changes.
+    private var keyboardTheme = FullKeyboardSettings().effectiveKeyboardTheme
     /// A paste iOS asked about or refused: the strip points to the setting that stops it.
-    private var showsAllowPasteHint = false
-    private var allowPasteHintHideWork: DispatchWorkItem?
+    var showsAllowPasteHint = false
+    var allowPasteHintHideWork: DispatchWorkItem?
     static let allowPasteHintDuration: TimeInterval = 8
 
     // MARK: Emoji (Settings › Keyboard › Emoji; FullKeyboardView+Emoji.swift)
@@ -146,6 +157,9 @@ final class FullKeyboardView: UIView {
         super.init(frame: .zero)
         backgroundColor = .clear
 
+        // Under the glass panel's rim, under every key: the keys' pop-ups overflow this
+        // view, which must never clip them, so the panel is a subview, not this view's fill.
+        insertSubview(themePanel, at: 0)
         addSubview(stripView)
         morph.isUserInteractionEnabled = false
         morph.isHidden = true
@@ -180,8 +194,14 @@ final class FullKeyboardView: UIView {
             self.model.onOpenURL?(KeyboardLaunchRequest.translationSettings.url)
         }
         stripView.onNextKeyboard = { [weak self] in
-            self?.typingLog?.ui("next_keyboard")
-            self?.hostController?.advanceToNextInputMode()
+            // Never where Apple's keyboard is split, where the strip doesn't offer it either.
+            guard let self, self.currentPosture?.splitsKeyboard == false else { return }
+            self.typingLog?.ui("next_keyboard")
+            self.hostController?.advanceToNextInputMode()
+        }
+        stripView.onKeyboardListTouch = { [weak self] chip, event in
+            if event.touches(for: chip)?.first?.phase == .began { self?.typingLog?.ui("keyboard_list") }
+            self?.inputModeListTouch(chip, with: event, holdsBackTap: true)
         }
         selectionStrip.onAction = { [weak self] action in self?.selectionAction(action) }
 
@@ -250,8 +270,14 @@ final class FullKeyboardView: UIView {
         engine.autoCapitalizes = FullKeyboardSettings().autoCapitalization
         engine.showsKeyPopups = FullKeyboardSettings().keyPopups
         engine.trackpadSelectionState.enabled = FullKeyboardSettings().twoThumbSelection
+        engine.deletesSwipedWordsLetterByLetter = FullKeyboardSettings().deletesSwipedWordsLetterByLetter
+        engine.quickAccentsEnabled = FullKeyboardSettings().quickAccents
         hidesWordSuggestions = FullKeyboardSettings().hideWordSuggestions
         syncHexPlacement()
+        syncNumberRow()
+        syncJoinsUnfoldedKeyboard()
+        syncDvorakPunctuation()
+        syncCommaPeriodKeys()
         refreshEmojiKey()
         syncSpatialAutocorrect()
         refreshLanguageSignals()
@@ -307,7 +333,14 @@ final class FullKeyboardView: UIView {
     private var padOrientation: KeyboardOrientation?
 
     var preferredHeight: CGFloat {
-        KeyboardLayout.height(for: orientation, posture: engine.posture, phoneSize: engine.phoneSize, pad: engine.pad) + lift
+        keysHeight + lift
+    }
+
+    /// The strip and the keys, without the lift.
+    private var keysHeight: CGFloat {
+        KeyboardLayout.height(
+            for: orientation, posture: engine.posture, phoneSize: engine.phoneSize, pad: engine.pad, numberRow: engine.hasNumberRow
+        )
     }
 
     /// Room above the strip for the emoji search results. The strip itself keeps its height in
@@ -319,7 +352,7 @@ final class FullKeyboardView: UIView {
 
     /// How much of the lift the view actually has yet, so nothing jumps before the host grows it.
     private var appliedLift: CGFloat {
-        max(0, min(lift, bounds.height - KeyboardLayout.height(for: orientation, posture: engine.posture, phoneSize: engine.phoneSize, pad: engine.pad)))
+        max(0, min(lift, bounds.height - keysHeight))
     }
 
     /// Reads which device and posture the keyboard is on, and how far iOS set it in from the
@@ -333,7 +366,8 @@ final class FullKeyboardView: UIView {
         let phoneSize = KeyboardPhoneSize.current(screenSize: size)
         let pad = Self.isPad ? KeyboardPadPlacement.current(screenSize: size, keyboardWidth: bounds.width) : nil
         let padOrientation = pad.map { KeyboardPadPlacement.orientation(screenSize: size, placement: $0, keyboardWidth: bounds.width) }
-        let heightChanges = posture != engine.posture || phoneSize != engine.phoneSize
+        let postureChanges = posture != engine.posture
+        let heightChanges = postureChanges || phoneSize != engine.phoneSize
             || pad != engine.pad || padOrientation != self.padOrientation
         engine.posture = posture
         engine.phoneSize = phoneSize
@@ -341,7 +375,15 @@ final class FullKeyboardView: UIView {
         engine.pad = pad
         self.padOrientation = padOrientation
         syncGlobe()
+        if postureChanges { refreshStrip() }
         if heightChanges { onPreferredHeightChange?() }
+    }
+
+    /// The posture as the keyboard's window shows it now; nil on the Duo before it has one.
+    var currentPosture: KeyboardPosture? {
+        guard Self.isFoldable else { return .phone }
+        guard let screen = window?.windowScene?.screen ?? window?.screen else { return nil }
+        return KeyboardPosture.current(screenSize: screen.bounds.size, isFoldable: true)
     }
 
     /// Hex's globe key where iOS asks for one, except floating on an iPad: iPadOS draws its own
@@ -445,7 +487,7 @@ final class FullKeyboardView: UIView {
                 )
             )
         }
-        // The keys' language's layout: with English and Spanish on one keyboard, the first one's.
+        // The keys' language's layout: with English and Spanish, or German, on one keyboard, the first one's.
         let letters = letterLayoutOverride.map(list.layout.offered) ?? settings.letterLayout(for: list.layout)
         // The host spells and autocorrects in the input mode's language, which supersedes the
         // Info.plist's en-US (`primaryLanguage`): report every change, a space-bar switch too.
@@ -508,8 +550,11 @@ final class FullKeyboardView: UIView {
         if engine.adaptiveTouch !== adaptive {
             engine.adaptiveTouch = adaptive
         }
+        engine.korean.isEnabled = FullKeyboardSettings().koreanKeyboard
         engine.showsKeyPopups = FullKeyboardSettings().keyPopups
         engine.autoCapitalizes = FullKeyboardSettings().autoCapitalization
+        engine.deletesSwipedWordsLetterByLetter = FullKeyboardSettings().deletesSwipedWordsLetterByLetter
+        engine.quickAccentsEnabled = FullKeyboardSettings().quickAccents
         let selectionEnabled = FullKeyboardSettings().twoThumbSelection
         engine.trackpadSelectionState.enabled = selectionEnabled
         // Turned off mid-selection: end it now rather than let a thumb keep picking.
@@ -521,8 +566,17 @@ final class FullKeyboardView: UIView {
             hidesWordSuggestions = hidesSuggestions
             refreshStrip()
         }
+        let theme = FullKeyboardSettings().effectiveKeyboardTheme
+        if theme != keyboardTheme {
+            keyboardTheme = theme
+            applyAppearance()
+        }
         hapticStrength = FullKeyboardSettings().hapticStrength
         syncHexPlacement()
+        syncNumberRow()
+        syncJoinsUnfoldedKeyboard()
+        syncDvorakPunctuation()
+        syncCommaPeriodKeys()
         refreshEmojiKey()
         let wantsAutocorrect = FullKeyboardSettings().autocorrect
         if engine.autocorrect.isEnabled != wantsAutocorrect {
@@ -545,18 +599,6 @@ final class FullKeyboardView: UIView {
 
     /// Fixtures pin where the Hex key sits; otherwise Settings › Keyboard › Hex key.
     var hexPlacementOverride: HexKeyPlacement? { didSet { syncHexPlacement() } }
-
-    /// Settings › Keyboard › Hex key: Right (the strip's trailing end) or Left (its leading
-    /// end), kept in `HexKeyPlacement.current` too for typing logs.
-    private func syncHexPlacement() {
-        let placement = hexPlacementOverride ?? FullKeyboardSettings().hexKeyPlacement
-        HexKeyPlacement.current = placement
-        guard engine.hexPlacement != placement else { return }
-        plane.cancelAllTouches()
-        dismissStyleMenu()
-        engine.hexPlacement = placement
-        setNeedsLayout()
-    }
 
     /// Fixtures and tests turn Swipe typing on or off; otherwise its switch in Settings › Keyboard.
     var swipeOverride: Bool? { didSet { syncSwipeTyping() } }
@@ -657,6 +699,7 @@ final class FullKeyboardView: UIView {
         dismissStyleMenu()
         if emojiPanel == nil {
             emojiLibrary = nil
+            EmojiLibrary.evictCached()
         }
         emojiPanel?.glyphs.purge()
         if !showsRecording, let panel = recordingPanel {
@@ -669,6 +712,7 @@ final class FullKeyboardView: UIView {
     /// Hex inserted a dictation between `before` and `after`; offer to take it back until the
     /// next edit, or until it can't be found from the cursor.
     func didInsertDictation(_ text: String, before: String = "", after: String = "") {
+        engine.commitHangulComposition()
         lastDictation = DictationUndo(text: text, before: before, after: after)
         engine.clearPendingSelectionDictation()
         refreshStrip()
@@ -681,32 +725,12 @@ final class FullKeyboardView: UIView {
         refreshReturnKey()
     }
 
-    /// Fixtures: show a key held down.
-    func debugPress(_ character: String) {
-        guard let key = engine.layout.key(.character(character)) else { return }
-        engine.touchBegan(id: -1, at: CGPoint(x: key.frame.midX, y: key.frame.midY))
-    }
-
-    /// Fixtures: show a key's accent callout with `option` selected.
-    func debugHoldAccent(_ character: String, selecting option: String) {
-        debugHoldAccent(character)
-        guard let index = engine.activeAccentMenu?.options.firstIndex(of: option) else { return }
-        engine.debugSelectAccent(index)
-    }
-
-    /// Fixtures: show a key's long-press accent callout.
-    func debugHoldAccent(_ character: String, selectIndex: Int? = nil) {
-        guard let key = engine.layout.key(.character(character)) else { return }
-        let center = CGPoint(x: key.frame.midX, y: key.frame.midY)
-        engine.touchBegan(id: -2, at: center)
-        _ = engine.openAccentMenuIfEligible(forTouch: -2)
-        if let selectIndex { engine.debugSelectAccent(selectIndex) }
-    }
-
     // MARK: - Layout
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        // A theme's panel keeps the glass panel's corners, 1 pt inside its rim.
+        themePanel.place(in: bounds)
         syncPosture()
         let isLandscape = orientation == .landscape
         engine.typingLog?.viewGeometry(size: bounds.size, safeArea: safeAreaInsets)
@@ -728,8 +752,18 @@ final class FullKeyboardView: UIView {
         stripView.pillInset = layout.metrics.stripInset
         stripView.textCenterY = layout.metrics.stripTextCenter
         stripView.chipHeight = layout.metrics.stripChipHeight
+        stripView.appleBar = layout.metrics.appleBar
+        stripView.dividerBesideHex = layout.metrics.appleBar && layout.key(.hex).map { $0.row < 0 } == true
         stripView.hexOnLeading = layout.hexOnLeading
         stripView.barMidX = layout.stripBarFrame.midX - layout.stripFrame.minX
+        // The bar from the keyboard's top to the strip's bottom, up to the Hex key beside it.
+        var bar = CGRect(x: layout.stripBarFrame.minX, y: 0, width: layout.stripBarFrame.width, height: layout.stripBarFrame.maxY)
+        if let hex = layout.key(.hex), hex.row < 0 {
+            bar = layout.hexOnLeading
+                ? CGRect(x: hex.hitFrame.maxX, y: bar.minY, width: bar.maxX - hex.hitFrame.maxX, height: bar.height)
+                : CGRect(x: bar.minX, y: bar.minY, width: hex.hitFrame.minX - bar.minX, height: bar.height)
+        }
+        stripView.barTouchFrame = bar.offsetBy(dx: -layout.stripFrame.minX, dy: -layout.stripFrame.minY)
 
         hexKey.cornerRadius = layout.metrics.cornerRadius
         if let hex = layout.key(.hex) {
@@ -766,8 +800,13 @@ final class FullKeyboardView: UIView {
     private func applyAppearance() {
         let isDark = appearanceOverride
             ?? FullKeyboardPalette.isDark(traits: traitCollection)
-        let next = FullKeyboardPalette(isDark: isDark)
+        let next = FullKeyboardPalette(isDark: isDark, theme: keyboardTheme)
+        // A theme paints its own opaque panel, so the system glass behind the keys never
+        // shows through. The panel, not this view, keeps the glass panel's corners;
+        // Automatic leaves both clear as before.
         backgroundColor = drawsBackdrop ? next.backdrop : .clear
+        themePanel.isHidden = !next.drawsOwnBackground
+        themePanel.backgroundColor = next.drawsOwnBackground ? next.backdrop : .clear
         stripView.inSystemPlatter = !drawsBackdrop
         guard next != palette || !didApplyPalette else { return }
         didApplyPalette = true
@@ -803,8 +842,6 @@ final class FullKeyboardView: UIView {
             setRecording(recording)
         }
         refreshRecordingPanel()
-        stripView.showsLoggingMark = model.isLoggingTyping
-        recordingPanel?.showsLoggingMark = model.isLoggingTyping
         // A language picked in the switch changes the layout at once when it follows dictation.
         syncLanguage()
         refreshSpaceLabel()
@@ -855,7 +892,8 @@ final class FullKeyboardView: UIView {
             keyboardType: engine.target.keyboardType,
             autocorrectionType: engine.target.autocorrectionType,
             fieldIsEmpty: !engine.target.hasText,
-            hasFullAccess: model.hasFullAccess
+            hasFullAccess: model.hasFullAccess,
+            canSwitchKeyboard: currentPosture.map { !$0.splitsKeyboard } ?? false
         )
         // A dictation that didn't go in by itself comes before a copy, but not in a code field.
         if model.hasFullAccess, model.offeredDictation != nil {
@@ -903,92 +941,6 @@ final class FullKeyboardView: UIView {
     private var translationNotice: KeyboardStripNotice? {
         guard model.hasFullAccess, let note = model.translationNote else { return nil }
         return KeyboardStripNotice(title: TranslationFailure.note, detail: note.fix, button: String(localized: "Open Hex"))
-    }
-
-    // MARK: - Without Full Access
-
-    /// The Hex key without Full Access: the keys keep typing, and the strip says, for a few
-    /// seconds, that dictation needs Allow Full Access and where to turn it on. Only its
-    /// Open Hex chip opens Hex; nothing opens it by itself.
-    func showFullAccessHint() {
-        dismissStyleMenu()
-        showsFullAccessHint = true
-        refreshStrip()
-        UIAccessibility.post(
-            notification: .announcement,
-            argument: "\(FullAccessHintView.title). Settings, Apps, Hex, Keyboards."
-        )
-        fullAccessHintHideWork?.cancel()
-        let work = DispatchWorkItem { [weak self] in self?.hideFullAccessHint() }
-        fullAccessHintHideWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.fullAccessHintDuration, execute: work)
-    }
-
-    private func hideFullAccessHint() {
-        fullAccessHintHideWork?.cancel()
-        fullAccessHintHideWork = nil
-        guard showsFullAccessHint else { return }
-        showsFullAccessHint = false
-        refreshStrip()
-    }
-
-    private func openSetupFromHint() {
-        keyFeedback()
-        hideFullAccessHint()
-        model.onOpenURL?(KeyboardLaunchRequest.setup.url)
-    }
-
-    private func pasteFromClipboard() {
-        if stripOffer == .dictation {
-            keyFeedback()
-            typingLog?.ui("paste_dictation")
-            model.onPasteDictation?()
-            refreshStrip()
-            return
-        }
-        let pasteboard = UIPasteboard.general
-        // The read blocks while iOS asks Allow Paste, so its length tells whether it asked.
-        let start = ProcessInfo.processInfo.systemUptime
-        let read = KeyboardClipboardTracker.read(pasteboard)
-        let readDuration = ProcessInfo.processInfo.systemUptime - start
-        let text = read.flatMap { $0.isEmpty ? nil : $0 }
-        let refused = text == nil && (pasteboard.hasStrings || pasteboard.hasURLs)
-        let pointsToSetting = clipboard.shouldPointToAllowPaste(readDuration: readDuration, refused: refused)
-        guard let text else {
-            if pointsToSetting { showAllowPasteHint() }
-            return
-        }
-        keyFeedback()
-        clipboard.markPasted()
-        typingLog?.edit("paste", [TypingLogField("inserted", .string(text))])
-        engine.forgetTextAroundKeys()
-        engine.target.insertText(text)
-        engine.textDidChange()
-        typingLog?.context("paste")
-        if pointsToSetting { showAllowPasteHint() }
-        refreshStrip()
-        onTextEdit?()
-    }
-
-    /// For a few seconds after a paste iOS asked about (or refused), the strip says where
-    /// to stop it asking: Settings › Apps › Hex › Paste from Other Apps › Allow.
-    private func showAllowPasteHint() {
-        showsAllowPasteHint = true
-        refreshStrip()
-        UIAccessibility.post(notification: .announcement, argument: KeyboardClipboardTracker.allowPasteHintAnnouncement)
-        allowPasteHintHideWork?.cancel()
-        let work = DispatchWorkItem { [weak self] in self?.hideAllowPasteHint() }
-        allowPasteHintHideWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.allowPasteHintDuration, execute: work)
-    }
-
-    /// Typing takes the strip back before the hint's time is up.
-    private func hideAllowPasteHint() {
-        allowPasteHintHideWork?.cancel()
-        allowPasteHintHideWork = nil
-        guard showsAllowPasteHint else { return }
-        showsAllowPasteHint = false
-        refreshStrip()
     }
 
     private func refreshRecordingPanel() {
@@ -1146,7 +1098,6 @@ final class FullKeyboardView: UIView {
             ])
             self.model.onStyleSelected?(self.model.style.next)
         }
-        panel.showsLoggingMark = model.isLoggingTyping
         panel.hexOnLeading = engine.layout.hexOnLeading
         insertSubview(panel, belowSubview: callout)
         recordingPanel = panel
@@ -1439,6 +1390,7 @@ final class FullKeyboardView: UIView {
     }
 
     private func undoDictation() {
+        engine.commitHangulComposition()
         guard let undo = lastDictation else { return }
         let text = undo.text
         let before = engine.target.documentContextBeforeInput ?? ""
@@ -1473,14 +1425,41 @@ final class FullKeyboardView: UIView {
         }
     }
 
+    /// The globe's touches go to UIKit's `handleInputModeList(from:with:)` as this control's
+    /// real events, as Apple documents: a tap switches to the next keyboard, a hold (0.2 s) or a
+    /// slide up opens the list, and lifting over the list picks that keyboard.
     private func configureGlobe() {
         globeButton.removeTarget(nil, action: nil, for: .allEvents)
-        if let controller = hostController {
-            globeButton.addTarget(
-                controller,
-                action: #selector(UIInputViewController.handleInputModeList(from:with:)),
-                for: .allTouchEvents
-            )
+        guard hostController != nil else { return }
+        globeButton.addTarget(self, action: #selector(globeTouch(_:with:)), for: .allTouchEvents)
+    }
+
+    @objc private func globeTouch(_ sender: UIButton, with event: UIEvent) {
+        inputModeListTouch(sender, with: event, holdsBackTap: engine.posture.splitsKeyboard)
+    }
+
+    /// Code from Messages, where the next keyboard could be Emoji or another third-party one,
+    /// holds back its tap the same way, so a tap opens the list and the person picks Apple's.
+    private func inputModeListTouch(_ sender: UIButton, with event: UIEvent, holdsBackTap: Bool) {
+        guard let controller = hostController else { return }
+        if let touch = event.touches(for: sender)?.first {
+            let onKey = sender.bounds.contains(touch.location(in: sender))
+            if touch.phase == .began { globeTouchLeftKey = false }
+            if touch.phase == .moved, !onKey { globeTouchLeftKey = true }
+            guard Self.passesGlobeTouch(
+                phase: touch.phase, onKey: onKey, leftKey: globeTouchLeftKey, appleKeyboardSplits: holdsBackTap
+            ) else { return }
         }
+        controller.handleInputModeList(from: sender, with: event)
+    }
+
+    /// Where Apple's keyboard is split (the Duo unfolded and upright), a lift on the globe that
+    /// never left it isn't passed on, so UIKit's hold opens the list instead of switching to the
+    /// next keyboard. iOS 27.2's switch to the next keyboard can end the app being typed in there
+    /// (TestFlight build 121, iPhone Duo: `-[UIKeyboardLayoutStar activationIndicatorView]` reads
+    /// one key past the end of a split keyboard not laid out yet, to show its language); a pick
+    /// from the list doesn't show that indicator.
+    static func passesGlobeTouch(phase: UITouch.Phase, onKey: Bool, leftKey: Bool, appleKeyboardSplits: Bool) -> Bool {
+        !(appleKeyboardSplits && phase == .ended && onKey && !leftKey)
     }
 }

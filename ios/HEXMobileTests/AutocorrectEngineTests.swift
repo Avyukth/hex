@@ -9,8 +9,13 @@ final class AutocorrectEngineTests: XCTestCase {
     private var target: FixtureTextTarget!
     private var engine: FullKeyboardEngine!
     private var now: TimeInterval = 200
+    /// The layouts and dictionaries below are Apple's iOS 27 keyboard; CI's newest simulator
+    /// runtime is iOS 26.5, so the version these tests describe is pinned.
+    private var runningSystemMajorVersion = 0
 
     override func setUp() async throws {
+        runningSystemMajorVersion = KeyboardLanguage.systemMajorVersion
+        KeyboardLanguage.systemMajorVersion = 27
         suiteName = "AutocorrectEngineTests-\(UUID().uuidString)"
         defaults = UserDefaults(suiteName: suiteName)!
         target = FixtureTextTarget()
@@ -24,6 +29,7 @@ final class AutocorrectEngineTests: XCTestCase {
     }
 
     override func tearDown() async throws {
+        KeyboardLanguage.systemMajorVersion = runningSystemMajorVersion
         defaults.removePersistentDomain(forName: suiteName)
     }
 
@@ -644,6 +650,56 @@ final class AutocorrectEngineTests: XCTestCase {
         XCTAssertEqual(AutocorrectEngine.sentenceStarters(.czech).count, 3)
     }
 
+    /// Hungarian types with iOS's hu dictionary, and a missing accent is the cheapest fix there
+    /// is, however many a word lacks ("koszonom" -> "köszönöm", "kesobb" -> "később"); ő and ű
+    /// are o and u with the combining double acute, so each is one edit like á or é, where
+    /// another language's layout counts an edit per accent. A two-letter non-word takes its
+    /// accent too ("es" -> "és"). A word of its own is never accented ("meg", "kor" stay though
+    /// the dictionary offers "még", "kör", and "az" and "is" stay): the checker knows it as
+    /// typed. The fixes run against a stub dictionary answering as an iPhone's would.
+    func testHungarianRestoresMissingDiacritics() {
+        XCTAssertEqual(AutocorrectEngine.singleEditKeyboardCost(from: "szivesen", to: "szívesen", language: .hungarian)!, 0.15, accuracy: 0.001)
+        XCTAssertEqual(AutocorrectEngine.singleEditKeyboardCost(from: "talalkozunk", to: "találkozunk", language: .hungarian)!, 0.15, accuracy: 0.001)
+        XCTAssertEqual(AutocorrectEngine.singleEditKeyboardCost(from: "koszonom", to: "köszönöm", language: .hungarian)!, 0.25, accuracy: 0.001)
+        XCTAssertEqual(AutocorrectEngine.singleEditKeyboardCost(from: "kesobb", to: "később", language: .hungarian)!, 0.20, accuracy: 0.001)
+        XCTAssertEqual(AutocorrectEngine.singleEditKeyboardCost(from: "kor", to: "kör", language: .hungarian)!, 0.15, accuracy: 0.001)
+        XCTAssertNil(AutocorrectEngine.singleEditKeyboardCost(from: "koszonom", to: "köszönöm", language: .english), "three edits elsewhere")
+        XCTAssertNil(AutocorrectEngine.singleEditKeyboardCost(from: "kesobb", to: "később", language: .english), "two edits elsewhere")
+        engine.language = .hungarian
+        XCTAssertEqual(engine.autocorrect.language, .hungarian)
+        XCTAssertNil(engine.autocorrect.decoder, "no Hungarian typing model")
+        XCTAssertEqual(AutocorrectEngine.sentenceStarters(.hungarian).count, 3)
+        XCTAssertEqual(AutocorrectEngine.clauseStarters(.hungarian).count, 3)
+        XCTAssertEqual(AutocorrectEngine.commonWords(.hungarian).count, 6)
+
+        let hungarian = stubbed {
+            $0.valid = ["köszönöm", "szívesen", "kérem", "kerek", "találkozunk", "később", "üdvözlöm", "meg", "még", "kor", "kör", "szépen", "az", "és", "is"]
+            // "kerek" is one adjacent key (m to k) from "kerem" and listed first; "kérem" only
+            // lacks its accent, and wins.
+            $0.guessTable = [
+                "koszonom": ["köszönöm"], "szivesen": ["szívesen"], "kerem": ["kerek", "kérem"],
+                "talalkozunk": ["találkozunk"], "kesobb": ["később"], "udvozlom": ["üdvözlöm"],
+                "meg": ["még"], "kor": ["kör"],
+            ]
+        }
+        hungarian.setLanguage(.hungarian, available: ["hu", "en_US"])
+        XCTAssertEqual(fix(hungarian, "koszonom"), "köszönöm")
+        XCTAssertEqual(fix(hungarian, "Koszonom"), "Köszönöm")
+        XCTAssertEqual(fix(hungarian, "szivesen"), "szívesen")
+        XCTAssertEqual(fix(hungarian, "kerem"), "kérem", "over kerek, one adjacent key away and listed first")
+        XCTAssertEqual(fix(hungarian, "talalkozunk"), "találkozunk")
+        XCTAssertEqual(fix(hungarian, "kesobb"), "később")
+        XCTAssertEqual(fix(hungarian, "udvozlom"), "üdvözlöm")
+        XCTAssertNil(fix(hungarian, "meg"), "meg is a word: no accent put on it")
+        XCTAssertNil(fix(hungarian, "kor"), "kor is one too")
+        XCTAssertNil(fix(hungarian, "szépen"), "a word stays")
+        XCTAssertEqual(fix(hungarian, "es"), "és", "a two-letter non-word takes its accent")
+        XCTAssertNil(fix(hungarian, "az"), "az is a word: no accent put on it")
+        XCTAssertNil(fix(hungarian, "is"), "is is one too")
+        hungarian.setLanguage(.spanish, available: ["hu", "es_ES"])
+        XCTAssertNil(fix(hungarian, "koszonom"), "three accents are three edits on another layout")
+    }
+
     /// TestFlight (build 56): "Autocomplete suggests English words in Czech too." With Czech
     /// and English chosen, a sentence the words before show is Czech (`languageLean`) gets
     /// Czech completions only, none of English's even where Czech has none, and an English
@@ -777,6 +833,36 @@ final class AutocorrectEngineTests: XCTestCase {
 
     private func fix(_ engine: AutocorrectEngine, before: String) -> String? {
         engine.replacementOnSpace(beforeInput: before, field: .text, autocorrectionType: .default)?.replacement
+    }
+
+    /// French elisions ("l'", "qu'"), typed on the AZERTY's apostrophe key: a slip on either
+    /// side of the apostrophe is fixed as a word of its own, an elision a key away from the one
+    /// typed becomes it, and a whole word the dictionary knows, a lone "l'" and every other
+    /// language's apostrophes stay as typed.
+    func testFrenchElisionsAreCorrectedOnEitherSide() {
+        let french = stubbed {
+            $0.valid = ["homme", "il", "ici", "est", "accord", "ai", "aujourd'hui"]
+            $0.guessTable = ["hpmme": ["homme"], "eat": ["est"], "acvord": ["accord"]]
+        }
+        french.setLanguage(.french, available: ["fr_FR"])
+        XCTAssertEqual(fix(french, before: "l'hpmme"), "l'homme")
+        XCTAssertEqual(fix(french, before: "Je dis l'hpmme"), "l'homme")
+        XCTAssertEqual(fix(french, before: "L'hpmme"), "L'homme")
+        XCTAssertEqual(fix(french, before: "d'acvord"), "d'accord")
+        XCTAssertEqual(fix(french, before: "c'eat"), "c'est")
+        XCTAssertEqual(fix(french, before: "k'homme"), "l'homme", "a slip in the elision")
+        XCTAssertEqual(fix(french, before: "qi'il"), "qu'il")
+        XCTAssertNil(fix(french, before: "l'homme"))
+        XCTAssertNil(fix(french, before: "j'ai"))
+        XCTAssertNil(fix(french, before: "aujourd'hui"))
+        XCTAssertNil(fix(french, before: "l'"))
+        XCTAssertNil(fix(french, before: "zz'homme"), "no elision a key away")
+        let english = stubbed {
+            $0.valid = ["man"]
+            $0.guessTable = ["hpmme": ["homme"]]
+        }
+        english.setLanguage(.english, available: ["en_US"])
+        XCTAssertNil(fix(english, before: "l'hpmme"), "other languages never split a word at its apostrophe")
     }
 
     /// French and English on one keyboard (Apple's "Français et English"): a word of either is
@@ -1328,6 +1414,49 @@ final class AutocorrectEngineTests: XCTestCase {
         typeTaps("zorbiz")
         typeTaps("zorbix")
         XCTAssertEqual(target.text, "Zorbix zorbix ", "a slip in a name from Contacts, and the name typed right")
+    }
+
+    /// X: "it refuses to capitalize I's in sentences". "i", "im", "ill", "ive" and "id" took
+    /// their capital on space, but "i'm", "i'll", "i've" and "i'd" typed with the apostrophe
+    /// stayed lowercase, with smart quotes too (their ’ ends a token). Auto-capitalization off
+    /// adds no capital, as for "i".
+    func testPronounContractionsTypedWithTheirApostropheTakeTheirCapital() {
+        func type(_ text: String) {
+            for ch in text {
+                if ch == "'" {
+                    tap(.layerSwitch(.numbers))
+                    tap(.character("'"))
+                    if engine.layout.layer != .letters { tap(.layerSwitch(.letters)) }
+                } else {
+                    typeWord(String(ch))
+                }
+            }
+        }
+        type("so i'm in and i'd go ")
+        target.smartQuotesType = .default
+        type("i'll say i've ")
+        engine.autoCapitalizes = false
+        type("i'm ")
+        XCTAssertEqual(target.text, "so I'm in and I'd go I\u{2019}ll say I\u{2019}ve i\u{2019}m ")
+    }
+
+    /// Record typing logs: a word of someone's own in capitals ("DONT", from Contacts or one Hex
+    /// learned) was read for a lowercase slip and put in by space. The strip offers it; space
+    /// puts in the next reading that clears the margin ("don't") or leaves what was typed.
+    /// Names and your vocabulary's spellings are as before.
+    func testSpatialAutocorrectOffersYourWordsInCapitalsWithoutPuttingThemIn() throws {
+        try useDecoder()
+        engine.autocorrect.loadLexiconEntries([("DONT", "DONT"), ("ZORBIX", "ZORBIX"), ("Quorvent", "Quorvent")])
+        for letter in "dpnt" { tapCentre(letter) }
+        XCTAssertTrue(engine.suggestions.contains { $0.replacement == "DONT" }, "offered in the strip")
+        tap(.space)
+        for word in ["zorbiz", "quorvemt"] { typeTaps(word) }
+        XCTAssertEqual(target.text, "don't zorbiz Quorvent ")
+        let autocorrect = engine.autocorrect
+        XCTAssertTrue(autocorrect.isOwnCapitals("McQuorv", typed: "mcquorc"), "capitals inside")
+        XCTAssertFalse(autocorrect.isOwnCapitals("DONT", typed: "DPNT"), "typed in capitals")
+        autocorrect.setVocabulary(["GitHub"])
+        XCTAssertFalse(autocorrect.isOwnCapitals("GitHub", typed: "githib"), "your vocabulary's spelling")
     }
 
     /// "th", then the e aimed high 80 ms later, landing on the strip's lower half under its

@@ -289,7 +289,15 @@ struct SetupSheet: View {
                     title: "Speech model",
                     status: modelStatus,
                     icon: modelReady ? .done : .todo
-                )
+                ) {
+                    // A check or download that ended is never the last word: try it again here.
+                    if modelFailed {
+                        smallButton("Try again") {
+                            keyboardSpeech.start(retry: true) { dictation.engineName }
+                            if case .failed = dictation.phase { dictation.prepareModel() }
+                        }
+                    }
+                }
             }
             .background(
                 HexTheme.bgBase,
@@ -362,6 +370,12 @@ struct SetupSheet: View {
         }
     }
 
+    private var modelFailed: Bool {
+        if case .failed = keyboardSpeech.state { return true }
+        if case .failed = dictation.phase { return !dictation.isModelReady }
+        return false
+    }
+
     private var modelStatus: String {
         if dictation.isModelReady && !keyboardSpeech.isReady {
             switch keyboardSpeech.state {
@@ -371,14 +385,11 @@ struct SetupSheet: View {
             }
         }
         if dictation.isModelReady {
-            // "Norwegian Bokmål · Apple": the language it really transcribes, short enough
-            // for the row.
+            // "Norwegian Bokmål": the language it really transcribes, never the engine.
             let code = Locale(identifier: dictation.transcriptionLanguageID).language.languageCode?.identifier ?? "en"
-            let language = Locale.current.localizedString(forLanguageCode: code).map {
+            return Locale.current.localizedString(forLanguageCode: code).map {
                 $0.prefix(1).uppercased() + $0.dropFirst()
             } ?? dictation.transcriptionLanguage
-            let engine = dictation.engineName == "Apple Speech" ? "Apple" : dictation.engineName
-            return "\(language) · \(engine)"
         }
         switch dictation.phase {
         case .preparingModel:
