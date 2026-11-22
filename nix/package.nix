@@ -91,7 +91,7 @@ let
       hash = "sha256-0yJb+UFu47T2pgDIi9B9IAxbCWNu0/OMVG5uGNF6lyI=";
     };
     "transcribe-cpp-sys-0.4.1" = {
-      rev = "60bed89dab84f7c1fddc3a17ad7fa8a27ddfba19";
+      rev = "d21828dca41be2b0dcde6b8684d8e39fc9d2cc3d";
       hash = "sha256-zyvuCkvze16s9ve2FI2Q6m80h61FuBwdD4HVAc4EnUA=";
     };
   };
