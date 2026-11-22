@@ -889,8 +889,10 @@ mod tests {
             system_dark: true,
             scale: 1.0,
         };
-        let text =
-            rune::text::TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES);
+        let text = rune::text::TextSystem::new(
+            crate::rune_ui::fonts::FONTS,
+            crate::rune_ui::fonts::FAMILIES,
+        );
         let mut rt =
             crate::rune_ui::offscreen::runtime(state, crate::rune_ui::view, size, env, text);
         rt.settle_all();

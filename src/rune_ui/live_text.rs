@@ -31,6 +31,17 @@ const PLATE_H: f32 = 32.0;
 const PAD: f32 = (SIZE.1 - PLATE_H) / 2.0;
 /// How long a failure notice stays beside the HUD.
 const FAILURE_VISIBLE: Duration = Duration::from_secs(6);
+/// Env var naming the JSON file written by the remote `/streams` UI client.
+/// Like `HEX_AUDIO_FIXTURE`, this is an opt-in integration knob, not a setting.
+const REMOTE_TEXT_FILE_ENV: &str = "HEX_REMOTE_TEXT_FILE";
+static REMOTE_TEXT_FILE: OnceLock<Option<std::path::PathBuf>> = OnceLock::new();
+
+/// The remote-text file when this process drives the plate from `/streams`.
+pub(crate) fn remote_text_file() -> Option<&'static std::path::PathBuf> {
+    REMOTE_TEXT_FILE
+        .get_or_init(|| std::env::var_os(REMOTE_TEXT_FILE_ENV).map(std::path::PathBuf::from))
+        .as_ref()
+}
 
 #[derive(Default)]
 pub(crate) struct Plate {
@@ -267,6 +278,52 @@ pub(crate) fn install<S: 'static>(app: &mut rune::App<S>, place: Place) {
                 plate.mark_shown(true);
             }
         });
+    });
+}
+
+/// Remote-client feed: show `stable`/`tentative` text on the same plate used
+/// by live dictation. Used by the Mac client that drives Hex's `/streams`
+/// API from another machine; no local dictation or model is involved.
+pub(crate) fn remote_partial(stable: String, tentative: String) {
+    if is_blank(&Partial {
+        stable: stable.clone(),
+        tentative: tentative.clone(),
+    }) {
+        return;
+    }
+    let (Some(overlay), Some(place)) = (LIVE.get(), PLACE.get().copied()) else {
+        return;
+    };
+    WORDS.store(true, Ordering::Release);
+    let handle = overlay.clone();
+    overlay.update(move |plate, tx| {
+        plate.set_words(stable, tentative);
+        tx.instant();
+        if plate.failure.is_none() && !plate.shown {
+            place().apply(&handle);
+            handle.show();
+            plate.mark_shown(true);
+        }
+    });
+}
+
+/// Remote-client feed: the remote stream ended. Keep the last words while
+/// the plate fades, exactly as a local recording ending does.
+pub(crate) fn remote_end() {
+    let Some(overlay) = LIVE.get() else {
+        return;
+    };
+    let words = WORDS.swap(false, Ordering::AcqRel);
+    if !words {
+        return;
+    }
+    let handle = overlay.clone();
+    overlay.update(move |plate, _| {
+        plate.words_ended();
+        if plate.should_hide() && plate.shown {
+            handle.fade_out(FADE);
+            plate.mark_shown(false);
+        }
     });
 }
 
@@ -560,7 +617,10 @@ mod tests {
                 system_dark: dark,
                 scale: 2.0,
             },
-            TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES),
+            TextSystem::new(
+                crate::rune_ui::fonts::FONTS,
+                crate::rune_ui::fonts::FAMILIES,
+            ),
         );
         rt.settle_all();
         rt.frame(0.0);

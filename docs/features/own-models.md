@@ -9,11 +9,17 @@ didn't pin.
 
 ## Add A Model File
 
+Canary imports (`stt.variant: indic-transcribe-core`) need a `transcribe.cpp`
+build with the `indic` prompt format; the pinned upstream revision accepts the
+header but does not decode the family yet. See
+[Remote `/streams` UI client](remote-streams.md).
+
 ```ts
 Picker header -> "Add model file…" -> native dialog (GGUF, All files)   // setup.custom-models
 ├── Header check, before anything loads (transcription::gguf_header): GGUF v2/v3;
 │   general.architecture parakeet | whisper | qwen3_asr | cohere_asr | sensevoice |
-│   gigaam (any other, e.g. llama.cpp's or SenseVoice.cpp's `sensevoice-small`,
+│   gigaam | canary (Canary includes Indic-Transcribe's `indic` prompt variant);
+│   (any other, e.g. llama.cpp's or SenseVoice.cpp's `sensevoice-small`,
 │   says the file was made for another program and needs a transcribe.cpp
 │   conversion, or the catalog's download; #1299);
 │   stt.variant; general.languages with a code Hex knows; only F32, F16, and

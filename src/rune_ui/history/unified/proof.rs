@@ -218,7 +218,10 @@ fn walkthrough(recover: bool) {
             scale: 1.,
             system_dark: true,
         },
-        TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES),
+        TextSystem::new(
+            crate::rune_ui::fonts::FONTS,
+            crate::rune_ui::fonts::FAMILIES,
+        ),
     );
     settle(&mut rt);
     assert!(rt.find("nav-history").is_some());

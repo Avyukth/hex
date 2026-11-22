@@ -59,6 +59,30 @@ const MAX_DEVELOPER_CONTROL_BYTES: usize = 16 * 1024;
 const DEVELOPER_CONTROL_TIMEOUT: Duration = Duration::from_secs(2);
 const MAX_CONTROL_BYTES: usize = 64 * 1024;
 const MAX_DICTATION_SOURCE_BYTES: usize = 128;
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+/// Env var that makes `hex service` run the headless local API with its own
+/// stream engine, instead of the desktop app. Opt-in integration knob.
+const STREAM_SERVICE_ENV: &str = "HEX_STREAM_SERVICE";
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+/// Env var naming the file whose contents select the language held by the
+/// headless service's `/streams` engine.
+const STREAM_LANGUAGE_FILE_ENV: &str = "HEX_STREAM_LANGUAGE_FILE";
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+static STREAM_LANGUAGE_FILE: std::sync::OnceLock<Option<PathBuf>> = std::sync::OnceLock::new();
+
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+/// Whether `hex service` should run the headless stream service.
+pub(crate) fn stream_service_enabled() -> bool {
+    std::env::var_os(STREAM_SERVICE_ENV)
+        .is_some_and(|value| matches!(value.to_string_lossy().as_ref(), "1" | "true"))
+}
+
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+fn stream_language_file() -> Option<&'static PathBuf> {
+    STREAM_LANGUAGE_FILE
+        .get_or_init(|| std::env::var_os(STREAM_LANGUAGE_FILE_ENV).map(PathBuf::from))
+        .as_ref()
+}
 
 type HealthProvider = Arc<dyn Fn() -> HealthResponse + Send + Sync>;
 type ModelPreparer =
@@ -414,7 +438,76 @@ pub fn run_service(
         drop(stdout);
         api
     } else {
-        LocalApi::start(events, LocalApiOptions::default())?
+        #[cfg(any(target_os = "linux", target_os = "windows"))]
+        {
+            // The headless service has no app-owned shared engine, so `/streams`
+            // would answer 503 engine-unavailable. Own one here, loaded with the
+            // model selected in settings, and expose it through Hex's existing
+            // SharedEngine adapter. The Arc is captured by the source closure,
+            // keeping the engine alive for the life of the service.
+            let settings = AppSettings::load()?;
+            let selection = crate::transcription::custom_models::runnable(&settings.transcription);
+            let transcriber =
+                crate::transcription::local_transcriber::LocalTranscriber::load(&selection)?;
+            let engine = Arc::new(crate::transcription::engine::TranscriptionEngine::start(
+                transcriber,
+            )?);
+
+            // Dynamic language for /streams: the model supports 25 Indic languages
+            // but does not auto-detect. Watch a small file and reload the engine
+            // with the same model and the requested language. The EngineSource
+            // below reads held_selection() each time, so new streams pick it up.
+            let watch_engine = engine.clone();
+            thread::Builder::new()
+                .name("hex-stream-language".into())
+                .spawn(move || {
+                    let Some(language_file) = stream_language_file() else {
+                        return;
+                    };
+                    loop {
+                        static LAST: std::sync::Mutex<String> =
+                            std::sync::Mutex::new(String::new());
+                        if let Ok(lang) = fs::read_to_string(language_file) {
+                            let lang = lang.trim().to_string();
+                            let mut last = LAST.lock().unwrap_or_else(|e| e.into_inner());
+                            if !lang.is_empty() && lang != *last {
+                                if let Some(sel) = watch_engine.held_selection() {
+                                    let mut next = sel;
+                                    next.language = lang.clone();
+                                    if let Err(error) = watch_engine.reload(next) {
+                                        tracing::warn!("stream language reload failed: {error:#}");
+                                        continue;
+                                    }
+                                }
+                                *last = lang;
+                            }
+                        }
+                        thread::sleep(Duration::from_millis(200));
+                    }
+                })?;
+
+            let api_engine = engine.clone();
+            let stream_engine: crate::transcription::stream::EngineSource = Arc::new(move || {
+                let selection = api_engine.held_selection().ok_or("model-not-loaded")?;
+                let adapter =
+                    crate::transcription::stream::SharedEngine::new(&api_engine, selection.clone());
+                Ok((
+                    Box::new(adapter) as Box<dyn crate::transcription::stream::Engine>,
+                    selection,
+                ))
+            });
+            LocalApi::start(
+                events,
+                LocalApiOptions {
+                    stream_engine: Some(stream_engine),
+                    ..LocalApiOptions::default()
+                },
+            )?
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "windows")))]
+        {
+            LocalApi::start(events, LocalApiOptions::default())?
+        }
     };
     while !shutdown.load(Ordering::Relaxed) {
         thread::sleep(Duration::from_millis(100));

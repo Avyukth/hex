@@ -177,7 +177,10 @@ fn a_held_shortcut_browses_real_rows_and_clicks_choose_the_original_item() {
                 system_dark: dark,
                 scale: 1.0,
             },
-            TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES),
+            TextSystem::new(
+                crate::rune_ui::fonts::FONTS,
+                crate::rune_ui::fonts::FAMILIES,
+            ),
         );
         render(&mut rt, out.as_deref(), &format!("{theme}-before"));
         let mut gesture = Gesture::default();

@@ -18,6 +18,7 @@ pub(crate) mod deep_link;
 mod drop_transcribe;
 mod explainer;
 mod find_popover;
+pub(crate) mod fonts;
 mod found;
 mod found_choice;
 mod fun;
@@ -562,8 +563,8 @@ fn spec() -> AppSpec<Ui> {
         init: Ui::fixture_base,
         view,
         scenes: SCENES,
-        fonts: rune_theme_opencode::FONTS,
-        families: rune_theme_opencode::FAMILIES,
+        fonts: crate::rune_ui::fonts::FONTS,
+        families: crate::rune_ui::fonts::FAMILIES,
         setup: Some(setup),
         poll: Some(poll),
         on_key: Some(on_key),
