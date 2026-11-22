@@ -17,6 +17,16 @@ Model License v1.0 (derived from `nvidia/canary-1b-v2`, CC BY 4.0). Hex pins a
 prompt format, ITN mixed-script mode (`<|itn|>` / `stt.canary.default_mode`),
 and `-Latn` romanized output.
 
+Observed benchmarks for `indic-transcribe-core-Q8_0.gguf` (1.4 GB, `Avyukth/transcribe.cpp` `hex/indic-canary`):
+- **Speed (`-r 5`):** `hi-test-16k.wav` (3.7 s, `hi`) / `whole-earth.wav` (84.4 s, `en`):
+  - CPU (`spark-12ce`, 20-core ARM): `348.4 ms` (`10x RT`) / `9,949.8 ms` (`8x RT`), load `~175 ms`.
+  - Metal (`MTL0`, Apple M3 Pro): `213.9 ms` (`17x RT`) / `4,088.0 ms` (`21x RT`), load `~150 ms`.
+  - CUDA (`CUDA0`, NVIDIA GB10): `103.5 ms` (`35x RT`) / `2,341.7 ms` (`36x RT`), load `~475 ms`; 15-clip Hindi FLEURS batch (181.0 s) in `4.73 s` (`38.3x RT`).
+- **Accuracy (CPU, NFC + punctuation-stripped single-reference WER / CER):**
+  - `google/fleurs` (`test`, 13 Indic languages × 15 clips = 195 utterances, 39.4 min): **18.38% macro WER / 6.01% macro CER** at `9.4x RT` (`hi` 5.71%/1.92%, `pa` 13.48%/3.59%, `bn` 13.84%/2.70%, `kn` 14.60%/3.95%, `mr` 16.28%/3.90%, `as` 16.67%/4.89%, `ur` 16.78%/6.48%, `gu` 18.95%/7.53%, `or` 22.96%/7.09%, `ne` 23.10%/6.77%, `ml` 23.29%/6.14%, `te` 25.94%/8.57%, `ta` 27.34%/14.61%).
+  - `ai4bharat/IndicVoices` (`valid`, 10 Indic languages × 15 clips = 150 spontaneous utterances, 15.9 min): **20.74% macro WER / 7.78% macro CER** at `9.2x RT` (`pa` 5.56%/2.12%, `bn` 11.97%/3.10%, `hi` 12.17%/5.57%, `or` 15.38%/2.80%, `kn` 15.62%/6.27%, `mr` 18.63%/9.09%, `te` 26.67%/8.43%, `mai` 30.67%/12.49%, `ta` 33.77%/8.24%, `gu` 36.93%/19.71%).
+  - Not observed: Vulkan GPU backend, `indic-transcribe-flex` live ITN/romanized corpus runs, and the 8 remaining `IndicVoices` languages (`brx`, `doi`, `ks`, `kok`, `mni`, `sa`, `sat`, `sd`).
+
 ```ts
 Picker header -> "Add model file…" -> native dialog (GGUF, All files)   // setup.custom-models
 ├── Header check, before anything loads (transcription::gguf_header): GGUF v2/v3;
