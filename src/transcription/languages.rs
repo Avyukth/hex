@@ -112,10 +112,12 @@ const OTHER_LANGUAGES: &[(&str, &str)] = &[
     ("jw", "Javanese"),
     ("su", "Sundanese"),
     // Indic-Transcribe (Canary) languages that Whisper does not name.
+    ("bgc", "Haryanvi"),
     ("bho", "Bhojpuri"),
     ("bhb", "Bhili"),
     ("brx", "Bodo"),
     ("doi", "Dogri"),
+    ("hne", "Chhattisgarhi"),
     ("kok", "Konkani"),
     ("ks", "Kashmiri"),
     ("mai", "Maithili"),
@@ -140,7 +142,7 @@ const WHISPER_LANGUAGES: &[&str] = &[
 /// names. They are valid for Canary imports only; keeping them out of
 /// `WHISPER_LANGUAGES` avoids offering them for Whisper.
 pub(super) const INDIC_CANARY_LANGUAGES: &[&str] = &[
-    "bho", "bhb", "brx", "doi", "kok", "ks", "mai", "mni", "or", "sat",
+    "bgc", "bho", "bhb", "brx", "doi", "hne", "kok", "ks", "mai", "mni", "or", "sat",
 ];
 
 /// Whether `language` is accepted by Whisper large-v3-turbo (a Settings
