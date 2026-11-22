@@ -36,13 +36,16 @@ const DIGITS: usize = 16;
 const MAX_NAME_CHARS: usize = 64;
 
 /// The model families Hex's runtime handles, with the names people know.
-const ARCHITECTURES: [(&str, &str); 6] = [
+const ARCHITECTURES: [(&str, &str); 7] = [
     ("parakeet", "Parakeet"),
     ("whisper", "Whisper"),
     ("qwen3_asr", "Qwen3-ASR"),
     ("cohere_asr", "Cohere Transcribe"),
     ("sensevoice", "SenseVoice"),
     ("gigaam", "GigaAM"),
+    // Canary (FastConformer encoder + Transformer decoder), including
+    // Indic-Transcribe's `indic` prompt variant from the transcribe.cpp fork.
+    ("canary", "Canary"),
 ];
 
 /// Whether a family takes a language prompt: Parakeet and GigaAM heads
@@ -579,7 +582,7 @@ fn profile(header: &GgufHeader, file_name: &str, types: TensorTypes) -> Result<P
         bail!(
             "its architecture is {architecture}, so it was made for another program. Hex runs \
              only GGUF files converted with transcribe.cpp (Parakeet, Whisper, Qwen3-ASR, \
-             Cohere Transcribe, SenseVoice, or GigaAM); for a model in Hex's list, download \
+             Cohere Transcribe, SenseVoice, GigaAM, or Canary); for a model in Hex's list, download \
              it from the list instead"
         );
     }
@@ -1457,6 +1460,31 @@ mod tests {
         );
         assert!(whisper.accepts_language_hint);
         assert!(!whisper.supports_language_detection);
+    }
+
+    #[test]
+    fn a_canary_header_with_indic_languages_is_accepted_and_takes_a_hint() {
+        let header = gguf_header::tests::read_header(gguf(
+            &[
+                ("general.architecture", "canary"),
+                ("general.name", "Indic Transcribe Core"),
+                ("stt.variant", "indic-transcribe-core"),
+            ],
+            &[(
+                "general.languages",
+                &["hi", "bn", "bho", "brx", "mai", "mni", "sat"],
+            )],
+            &[("stt.capability.lang_detect", false)],
+            &[("a", 8, 64)],
+        ));
+        let profile = profile(&header, "file", TensorTypes::STANDARD).unwrap();
+        assert_eq!(profile.architecture, "canary");
+        assert_eq!(family(&profile.architecture), "Canary");
+        assert_eq!(
+            profile.languages,
+            ["hi", "bn", "bho", "brx", "mai", "mni", "sat"]
+        );
+        assert!(takes_language_hint("canary"));
     }
 
     #[test]

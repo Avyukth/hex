@@ -111,6 +111,17 @@ const OTHER_LANGUAGES: &[(&str, &str)] = &[
     ("ba", "Bashkir"),
     ("jw", "Javanese"),
     ("su", "Sundanese"),
+    // Indic-Transcribe (Canary) languages that Whisper does not name.
+    ("bho", "Bhojpuri"),
+    ("bhb", "Bhili"),
+    ("brx", "Bodo"),
+    ("doi", "Dogri"),
+    ("kok", "Konkani"),
+    ("ks", "Kashmiri"),
+    ("mai", "Maithili"),
+    ("mni", "Manipuri"),
+    ("or", "Odia"),
+    ("sat", "Santali"),
 ];
 
 /// Whether Settings lists `code` for every model that supports it.

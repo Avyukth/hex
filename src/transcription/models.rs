@@ -861,8 +861,15 @@ const WHISPER_LANGUAGES: &[&str] = &[
     "ha", "ba", "jw", "su", "yue",
 ];
 
-/// Whether `language` is a code Hex knows: one Settings lists, or one of
-/// Whisper's, which only models that accept any language support.
+/// Indic-Transcribe Canary codes that neither Settings' list nor Whisper
+/// names. They are valid for the Canary family only; keeping them out of
+/// WHISPER_LANGUAGES avoids offering those languages for Whisper.
+const INDIC_CANARY_LANGUAGES: &[&str] = &[
+    "bho", "bhb", "brx", "doi", "kok", "ks", "mai", "mni", "or", "sat",
+];
+
+/// Whether `language` is a code Hex knows: one Settings lists, one of
+/// Whisper's, or one used by a Canary import.
 pub fn is_known_language(language: &str) -> bool {
     known_language(language).is_some()
 }
@@ -873,6 +880,7 @@ pub(crate) fn known_language(language: &str) -> Option<&'static str> {
         .iter()
         .map(|(code, _)| *code)
         .chain(WHISPER_LANGUAGES.iter().copied())
+        .chain(INDIC_CANARY_LANGUAGES.iter().copied())
         .find(|code| *code == language)
 }
 

@@ -28,6 +28,10 @@ Hex                                      // macOS release
 have detailed maps.
 [Accessibility](accessibility.md) maps what screen readers, Voice Control, and
 automation (strobe's benches) read from the window, the HUD, and the capsules.
+[Indic text rendering](fonts.md) maps the bundled Noto Sans faces that let the
+window draw native-script transcripts on every OS.
+[Remote `/streams` UI client](remote-streams.md) drives the same live-text plate
+from a model running on another machine.
 Agents can [read retained transcripts](transcript-cli.md) and
 [control the running app](control-cli.md) with the release CLI.
 [Labs](labs.md) gives every unfinished feature its own switch, off by

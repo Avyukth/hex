@@ -353,7 +353,10 @@ fn ink_lands_under_the_pointer_in_the_frame_it_is_drawn() {
             system_dark: true,
             scale: 2.0,
         },
-        rune::text::TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES),
+        rune::text::TextSystem::new(
+            crate::rune_ui::fonts::FONTS,
+            crate::rune_ui::fonts::FAMILIES,
+        ),
     );
     rt.frame(0.0);
     let draft = |rt: &rune::Runtime<Editor>| {
@@ -747,8 +750,8 @@ fn editor_goldens() {
                     scale: 2.0,
                 },
                 rune::text::TextSystem::new(
-                    rune_theme_opencode::FONTS,
-                    rune_theme_opencode::FAMILIES,
+                    crate::rune_ui::fonts::FONTS,
+                    crate::rune_ui::fonts::FAMILIES,
                 ),
             );
             let (w, h) = ((SCREEN[0] * 2.0) as u32, (SCREEN[1] * 2.0) as u32);
@@ -816,7 +819,10 @@ fn editor_frames() {
             system_dark: true,
             scale: 2.0,
         },
-        rune::text::TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES),
+        rune::text::TextSystem::new(
+            crate::rune_ui::fonts::FONTS,
+            crate::rune_ui::fonts::FAMILIES,
+        ),
     );
     rt.frame(0.0);
     let (w, h) = ((SCREEN[0] * 2.0) as u32, (SCREEN[1] * 2.0) as u32);

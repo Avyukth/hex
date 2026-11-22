@@ -521,6 +521,41 @@ pub fn run(shutdown: &'static AtomicBool, listener: ListenerConfig, hidden: bool
     };
     let hud = crate::rune_hud::install(&mut app);
     crate::rune_ui::live_text::install(&mut app, crate::rune_hud::live_text_place);
+
+    // Remote-client mode: feed the exact same live-text plate from text that
+    // the Mac-side /streams client writes to a small JSON file. No local
+    // dictation text is published by this thread.
+    if let Some(path) = crate::rune_ui::live_text::remote_text_file() {
+        thread::Builder::new()
+            .name("hex-remote-text".into())
+            .spawn(move || {
+                let mut last = String::new();
+                loop {
+                    let Ok(raw) = std::fs::read_to_string(&path) else {
+                        std::thread::sleep(std::time::Duration::from_millis(100));
+                        continue;
+                    };
+                    if raw != last {
+                        last = raw.clone();
+                        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw) {
+                            if v.get("end").and_then(|x| x.as_bool()) == Some(true) {
+                                crate::rune_ui::live_text::remote_end();
+                            } else {
+                                let stable = v.get("stable").and_then(|x| x.as_str()).unwrap_or("");
+                                let tentative =
+                                    v.get("tentative").and_then(|x| x.as_str()).unwrap_or("");
+                                crate::rune_ui::live_text::remote_partial(
+                                    stable.to_string(),
+                                    tentative.to_string(),
+                                );
+                            }
+                        }
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
+            })?;
+    }
+
     #[cfg(hex_capture)]
     crate::rune_ui::paste_picker::install(&mut app);
     // The capture capsule, picker, and ink.

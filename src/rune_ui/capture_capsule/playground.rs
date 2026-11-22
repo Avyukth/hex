@@ -85,8 +85,8 @@ pub(crate) fn run(rune_args: Vec<String>) {
         title: "Hex capsule playground",
         min_size: Some(WINDOW),
         scenes: SCENES,
-        fonts: rune_theme_opencode::FONTS,
-        families: rune_theme_opencode::FAMILIES,
+        fonts: crate::rune_ui::fonts::FONTS,
+        families: crate::rune_ui::fonts::FAMILIES,
         poll: Some(poll),
         on_key: Some(on_key),
         ..rune::AppSpec::new("Hex capsule playground", WINDOW, init, super::view)

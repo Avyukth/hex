@@ -178,10 +178,16 @@ pub(crate) fn run(shutdown: &'static AtomicBool) -> Result<()> {
             crate::local_api::run_service(&log_dir, event_path, true, shutdown)
         }
         Command::Service { embedded: false } => {
-            match crate::linux::app::run(event_path, shutdown, None) {
-                // A unit start that lost the race to another launch has nothing to do.
-                Err(_) if crate::linux::service::another_instance_answers() => Ok(()),
-                result => result,
+            // Opt-in headless stream service; the default stays the desktop
+            // app so existing systemd units keep their behaviour.
+            if crate::local_api::stream_service_enabled() {
+                crate::local_api::run_service(&log_dir, event_path, false, shutdown)
+            } else {
+                match crate::linux::app::run(event_path, shutdown, None) {
+                    // A unit start that lost the race to another launch has nothing to do.
+                    Err(_) if crate::linux::service::another_instance_answers() => Ok(()),
+                    result => result,
+                }
             }
         }
         Command::Dictate { device } => {

@@ -27,7 +27,10 @@ fn runtime_for(state: Ui, dark: bool, size: (f32, f32)) -> Runtime<Ui> {
         system_dark: dark,
         scale: GOLDEN_SCALE,
     };
-    let text = TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES);
+    let text = TextSystem::new(
+        crate::rune_ui::fonts::FONTS,
+        crate::rune_ui::fonts::FAMILIES,
+    );
     let mut rt = crate::rune_ui::offscreen::runtime(state, view, size, env, text);
     rt.poll = Some(poll);
     rt.on_key = Some(on_key);
