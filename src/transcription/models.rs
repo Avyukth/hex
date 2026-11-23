@@ -49,6 +49,7 @@ pub enum TranscriptionModelId {
     NbWhisperMedium,
     KbWhisperMedium,
     GraniteSpeech5,
+    IndicTranscribeFlex,
     AppleSpeech,
     Custom(CustomModelId),
 }
@@ -88,6 +89,7 @@ impl TranscriptionModelId {
             Self::NbWhisperMedium => "nb_whisper_medium",
             Self::KbWhisperMedium => "kb_whisper_medium",
             Self::GraniteSpeech5 => "granite_speech_5",
+            Self::IndicTranscribeFlex => "indic_transcribe_flex",
             Self::AppleSpeech => "apple_speech",
             Self::Custom(id) => id.as_str(),
         }
@@ -129,6 +131,7 @@ impl FromStr for TranscriptionModelId {
             "nb_whisper_medium" => Ok(Self::NbWhisperMedium),
             "kb_whisper_medium" => Ok(Self::KbWhisperMedium),
             "granite_speech_5" => Ok(Self::GraniteSpeech5),
+            "indic_transcribe_flex" => Ok(Self::IndicTranscribeFlex),
             "apple_speech" => Ok(Self::AppleSpeech),
             _ => CustomModelId::parse(value)
                 .map(Self::Custom)
@@ -1066,6 +1069,37 @@ mod tests {
     }
 
     #[test]
+    fn indic_transcribe_flex_supports_all_27_languages_and_auto() {
+        let flex = definition(TranscriptionModelId::IndicTranscribeFlex);
+        assert!(flex.available());
+        assert!(!flex.id.is_labs_gated());
+        assert!(!flex.streams);
+        assert!(flex.accepts_language_hint);
+        assert!(flex.supports_language_detection);
+        assert!(flex.word_error_rate.is_none());
+        assert!(benchmark(&flex).is_none());
+        assert!(super::super::model_details::details(flex.id).is_some());
+        assert_eq!(flex.languages.len(), 27);
+        assert!(flex.supports_language(AUTO_LANGUAGE));
+        assert_eq!(flex.runtime_language_hint(AUTO_LANGUAGE), None);
+        assert_eq!(flex.runtime_language_hint("hi"), Some("hi"));
+        assert_eq!(flex.runtime_language_hint("ta"), Some("ta"));
+        assert_eq!(flex.runtime_language_hint("bho"), Some("bho"));
+        assert_eq!(flex.language_choices().len(), 28);
+        assert_eq!(flex.language_choices()[0], AUTO_LANGUAGE);
+        for language in flex.languages.iter().copied() {
+            assert!(
+                validate(&TranscriptionSelection {
+                    model: flex.id,
+                    language: language.into(),
+                })
+                .is_ok(),
+                "{language}"
+            );
+        }
+    }
+
+    #[test]
     fn parakeet_ultra_is_offered_only_with_its_lab_and_a_saved_choice_survives() {
         let ultra = definition(TranscriptionModelId::ParakeetUltra);
         assert_eq!(ultra.available(), crate::labs::parakeet_ultra());
@@ -1448,6 +1482,11 @@ mod tests {
             (TranscriptionModelId::GigaAmV3, "gigaam_v3"),
             (TranscriptionModelId::NbWhisperMedium, "nb_whisper_medium"),
             (TranscriptionModelId::KbWhisperMedium, "kb_whisper_medium"),
+            (TranscriptionModelId::GraniteSpeech5, "granite_speech_5"),
+            (
+                TranscriptionModelId::IndicTranscribeFlex,
+                "indic_transcribe_flex",
+            ),
             (TranscriptionModelId::AppleSpeech, "apple_speech"),
         ] {
             assert_eq!(id.as_str(), name);

@@ -157,6 +157,31 @@ Notice supplied with the files:
 
 The weights are provided as-is, without warranties, as the licence states.
 
+## Indic-Transcribe-Flex
+
+Built with Indic-Transcribe-Flex from Bodhan AI / AI4Bharat. Based on NVIDIA
+Canary 1B v2 (CC BY 4.0). GGUF conversion and quantization by TheAnimatrix.
+Indic Open Model License v1.0. Hex downloads `indic-transcribe-flex-Q8_0.gguf`
+from https://huggingface.co/TheAnimatrix/indic-transcribe-flex-gguf/tree/a8a7200a683d54b29a894499f2110ced870906bb
+and does not ship the weights.
+
+Copyright (c) 2026 IITM Bodhan-AI Foundation. Licensed under the Indic Open
+Model License v1.0.
+
+License: https://huggingface.co/TheAnimatrix/indic-transcribe-flex-gguf/blob/a8a7200a683d54b29a894499f2110ced870906bb/LICENSE.md
+
+Notice supplied with the files:
+
+> Built with Indic-Transcribe-Flex from Bodhan AI / AI4Bharat
+> (https://huggingface.co/bodhan-ai/indic-transcribe-flex, Indic Open Model
+> License v1.0), fine-tuned from NVIDIA Canary 1B v2
+> (https://huggingface.co/nvidia/canary-1b-v2, CC BY 4.0). Converted from
+> `nemo/indic_transcribe_flex.nemo` (revision `ecba9ba`) to GGUF (Q8_0, default
+> mixed script) for transcribe.cpp by TheAnimatrix. The weights were not
+> retrained or fine-tuned during conversion.
+
+The weights are provided as-is, without warranties, as the licence states.
+
 ## Noto Sans Indic Fonts
 
 The Indic script fallback fonts in `assets/fonts/` (`NotoSansDevanagari`,

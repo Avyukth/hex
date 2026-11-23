@@ -278,6 +278,25 @@ pub(super) const GRANITE_SPEECH_5_ARTIFACT: GgufArtifact = GgufArtifact {
     variant: Cow::Borrowed("granite-speech-5.0-470m-turboctc"),
 };
 pub(super) const GRANITE_SPEECH_5_LANGUAGES: &[&str] = &["en", "fr", "de", "es", "pt", "it", "ja"];
+// Bodhan AI / AI4Bharat's Indic-Transcribe-Flex (Indic Open Model License v1.0),
+// fine-tuned from NVIDIA Canary 1B v2 (CC BY 4.0) for 26 Indian languages plus
+// English, with mixed-script code-switching by default (`stt.canary.default_mode
+// = mixed`). TheAnimatrix converted bodhan-ai/indic-transcribe-flex at ecba9ba
+// to GGUF for transcribe.cpp and quantized it to Q8_0 (F32, F16, Q8_0 tensors).
+pub(super) const INDIC_TRANSCRIBE_FLEX_ARTIFACT: GgufArtifact = GgufArtifact {
+    filename: Cow::Borrowed("indic-transcribe-flex-Q8_0.gguf"),
+    stored_as: None,
+    revision: "a8a7200a683d54b29a894499f2110ced870906bb",
+    repository: "TheAnimatrix/indic-transcribe-flex-gguf",
+    bytes: 1_410_457_312,
+    sha256: Cow::Borrowed("807af7f8fe04cfa623fa5edb77e422f1db6ef7052ccd3be6064a43ae02dd3282"),
+    architecture: "canary",
+    variant: Cow::Borrowed("indic-transcribe-flex"),
+};
+pub(super) const INDIC_TRANSCRIBE_FLEX_LANGUAGES: &[&str] = &[
+    "en", "hi", "bn", "as", "bgc", "bhb", "bho", "brx", "doi", "gu", "hne", "kn", "kok", "ks",
+    "mai", "ml", "mni", "mr", "ne", "or", "pa", "sa", "sat", "sd", "ta", "te", "ur",
+];
 /// The languages Nemotron 3.5 transcribes that Hex names, as the locales
 /// its language prompt takes (`runtime_language`). Its card also lists
 /// Norwegian Bokmål, which Hex doesn't offer it for yet.

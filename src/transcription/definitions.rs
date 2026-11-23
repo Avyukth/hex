@@ -12,9 +12,10 @@ use std::sync::Arc;
 
 use super::artifacts::{
     COHERE_ARTIFACT, COHERE_LANGUAGES, FLUID_SPEECH_PRO_ARTIFACT, GIGAAM_V3_E2E_RNNT_ARTIFACT,
-    GRANITE_SPEECH_5_ARTIFACT, GRANITE_SPEECH_5_LANGUAGES, IVRIT_WHISPER_ARTIFACT,
-    KB_WHISPER_MEDIUM_ARTIFACT, NB_WHISPER_MEDIUM_ARTIFACT, NEMOTRON_3_5_ASR_ARTIFACT,
-    NEMOTRON_3_5_LANGUAGES, NEMOTRON_3_5_LOCALES, ORUKEET_ARTIFACT, PARAKEET_ULTRA_ARTIFACT,
+    GRANITE_SPEECH_5_ARTIFACT, GRANITE_SPEECH_5_LANGUAGES, INDIC_TRANSCRIBE_FLEX_ARTIFACT,
+    INDIC_TRANSCRIBE_FLEX_LANGUAGES, IVRIT_WHISPER_ARTIFACT, KB_WHISPER_MEDIUM_ARTIFACT,
+    NB_WHISPER_MEDIUM_ARTIFACT, NEMOTRON_3_5_ASR_ARTIFACT, NEMOTRON_3_5_LANGUAGES,
+    NEMOTRON_3_5_LOCALES, ORUKEET_ARTIFACT, PARAKEET_ULTRA_ARTIFACT,
     PARAKEET_UNIFIED_ENGLISH_ARTIFACT, PARAKEET_V2_ARTIFACT, PARAKEET_V3_ARTIFACT,
     PARAKEET_V3_LANGUAGES, QWEN_ARTIFACT, QWEN_LANGUAGES, QWENCLEO_ARTIFACT, SENSEVOICE_ARTIFACT,
     UNDERDOG_BARK_3_CLEAN_ARTIFACT, UNDERDOG_BARK_3_PRO_ARTIFACT, WHISPER_ARTIFACT,
@@ -555,6 +556,24 @@ pub const MODELS: &[ModelDefinition] = &[
         // its seven languages it hears, so it is offered under Auto even
         // though its pinned file leaves stt.capability.lang_detect off.
         accepts_language_hint: false,
+        supports_language_detection: true,
+    },
+    ModelDefinition {
+        id: TranscriptionModelId::IndicTranscribeFlex,
+        name: text("Indic-Transcribe-Flex"),
+        // Same Canary 1B architecture and Q8_0 quantization as Indic-Transcribe-Core
+        // (17x to 21x real time on Apple M3 Pro Metal, 35x to 36x on GB10 CUDA).
+        realtime: "~21x",
+        // The model card publishes Voice of India OIWER rather than a single
+        // LibriSpeech or FLEURS comparable figure, so the picker's single
+        // number stays unset; its attribution and licence are in its details.
+        word_error_rate: None,
+        streams: false,
+        runtime: gguf(&INDIC_TRANSCRIBE_FLEX_ARTIFACT),
+        languages: languages(INDIC_TRANSCRIBE_FLEX_LANGUAGES),
+        // Takes any of its 27 languages as a hint, and Auto runs 1-step
+        // decoder language detection in transcribe.cpp.
+        accepts_language_hint: true,
         supports_language_detection: true,
     },
     ModelDefinition {

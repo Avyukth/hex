@@ -174,11 +174,32 @@ const FLUID_SPEECH_PRO: ModelDetails = ModelDetails {
                            revisions, normalization, and scorer versions unknown",
 };
 
+const INDIC_TRANSCRIBE_FLEX: ModelDetails = ModelDetails {
+    attribution: "Built with Indic-Transcribe-Flex from Bodhan AI / AI4Bharat. Based on NVIDIA \
+                  Canary 1B v2 (CC BY 4.0). GGUF conversion and quantization by TheAnimatrix. \
+                  Indic Open Model License v1.0.",
+    source_url: "https://huggingface.co/TheAnimatrix/indic-transcribe-flex-gguf/blob/\
+                 a8a7200a683d54b29a894499f2110ced870906bb/README.md",
+    license_url: "https://huggingface.co/TheAnimatrix/indic-transcribe-flex-gguf/blob/\
+                  a8a7200a683d54b29a894499f2110ced870906bb/LICENSE.md",
+    notice: "Built with Indic-Transcribe-Flex from Bodhan AI / AI4Bharat \
+             (https://huggingface.co/bodhan-ai/indic-transcribe-flex, Indic Open Model License \
+             v1.0), fine-tuned from NVIDIA Canary 1B v2 (https://huggingface.co/nvidia/canary-1b-v2, \
+             CC BY 4.0). Converted from nemo/indic_transcribe_flex.nemo (revision ecba9ba) to \
+             GGUF (Q8_0, default mixed script) for transcribe.cpp by TheAnimatrix. The weights \
+             were not retrained or fine-tuned during conversion.",
+    peak_memory: None,
+    published: &[],
+    published_conditions: "No per-language FLEURS table is published for the Q8_0 file; see the \
+                           upstream model card for Bodhan AI's Voice of India OIWER figures.",
+};
+
 pub fn details(id: TranscriptionModelId) -> Option<&'static ModelDetails> {
     match id {
         TranscriptionModelId::ParakeetUltra => Some(&PARAKEET_ULTRA),
         TranscriptionModelId::Orukeet => Some(&ORUKEET),
         TranscriptionModelId::FluidSpeechPro => Some(&FLUID_SPEECH_PRO),
+        TranscriptionModelId::IndicTranscribeFlex => Some(&INDIC_TRANSCRIBE_FLEX),
         _ => None,
     }
 }
@@ -265,5 +286,23 @@ mod tests {
                 .contains("Converted to a transcribe.cpp GGUF (Q8_0) by TalkMate")
         );
         assert!(fluid.peak_memory.is_none());
+    }
+
+    #[test]
+    fn indic_transcribe_flex_details_credit_bodhan_ai_and_canary_base() {
+        let flex = details(TranscriptionModelId::IndicTranscribeFlex).unwrap();
+        assert!(
+            flex.attribution
+                .starts_with("Built with Indic-Transcribe-Flex from Bodhan AI / AI4Bharat.")
+        );
+        assert!(flex.attribution.contains("NVIDIA Canary 1B v2 (CC BY 4.0)"));
+        assert!(flex.attribution.ends_with("Indic Open Model License v1.0."));
+        assert!(
+            flex.source_url
+                .ends_with("a8a7200a683d54b29a894499f2110ced870906bb/README.md")
+        );
+        assert!(flex.license_url.ends_with("LICENSE.md"));
+        assert!(flex.notice.contains("TheAnimatrix"));
+        assert!(flex.peak_memory.is_none());
     }
 }

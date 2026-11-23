@@ -94,6 +94,7 @@ pub(super) const TRANSLATIONS: &[(&str, [&str; 6])] = &[
     ("Display {}", ["Ekran {}", "显示器 {}", "ディスプレイ {}", "Display {}", "Pantalla {}", "Дисплей {}"]),
     ("Export size", ["Rozmiar eksportu", "导出尺寸", "書き出しサイズ", "Exportgröße", "Tamaño de exportación", "Розмір експорту"]),
     ("Pause", ["Wstrzymaj", "暂停", "一時停止", "Pause", "Pausar", "Пауза"]),
+    ("26 Indian languages and English, with mixed-script code-switching", ["26 języków indyjskich i angielski, z przełączaniem kodów w piśmie mieszanym", "26 种印度语言和英语，支持混合文字语码转换", "インドの 26 言語と英語に対応、混在スクリプトのコードスイッチング付き", "26 indische Sprachen und Englisch, mit Code-Switching in gemischter Schrift", "26 idiomas indios e inglés, con cambio de código en escritura mixta", "26 індійських мов та англійська, зі змішаним письмом при перемиканні кодів"]),
 ];
 
 #[rustfmt::skip]
@@ -119,6 +120,7 @@ pub(super) const FRENCH: &[(&str, &str)] = &[
     ("Display {}", "Écran {}"),
     ("Export size", "Taille d’export"),
     ("Pause", "Pause"),
+    ("26 Indian languages and English, with mixed-script code-switching", "26 langues indiennes et l'anglais, avec alternance de code en écriture mixte"),
 ];
 
 #[rustfmt::skip]
@@ -144,6 +146,7 @@ pub(super) const PORTUGUESE: &[(&str, &str)] = &[
     ("Display {}", "Tela {}"),
     ("Export size", "Tamanho da exportação"),
     ("Pause", "Pausar"),
+    ("26 Indian languages and English, with mixed-script code-switching", "26 idiomas indianos e inglês, com alternância de código em escrita mista"),
 ];
 
 #[rustfmt::skip]
@@ -169,4 +172,5 @@ pub(super) const RUSSIAN: &[(&str, &str)] = &[
     ("Display {}", "Дисплей {}"),
     ("Export size", "Размер экспорта"),
     ("Pause", "Пауза"),
+    ("26 Indian languages and English, with mixed-script code-switching", "26 индийских языков и английский, со смешанным письмом при переключении кодов"),
 ];
