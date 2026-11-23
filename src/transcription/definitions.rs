@@ -152,8 +152,11 @@ impl ModelDefinition {
     pub fn supports_language(&self, language: &str) -> bool {
         if language == AUTO_LANGUAGE {
             self.supports_language_detection
+        } else if self.languages.contains(&"*") {
+            self.id != TranscriptionModelId::WhisperLargeV3Turbo
+                || super::languages::is_whisper_language(language)
         } else {
-            self.languages.contains(&"*") || self.languages.contains(&language)
+            self.languages.contains(&language)
         }
     }
 

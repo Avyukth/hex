@@ -6300,7 +6300,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix 1.1.5",
  "windows-sys 0.61.2",
@@ -6695,7 +6695,7 @@ dependencies = [
 [[package]]
 name = "transcribe-cpp"
 version = "0.4.1"
-source = "git+https://github.com/anomalyco/transcribe.cpp?rev=60bed89dab84f7c1fddc3a17ad7fa8a27ddfba19#60bed89dab84f7c1fddc3a17ad7fa8a27ddfba19"
+source = "git+https://github.com/Avyukth/transcribe.cpp?rev=8be0a43ad45cbc95b2f6848fa28304a4bcf59eac#8be0a43ad45cbc95b2f6848fa28304a4bcf59eac"
 dependencies = [
  "log",
  "thiserror 2.0.21",
@@ -6705,7 +6705,7 @@ dependencies = [
 [[package]]
 name = "transcribe-cpp-sys"
 version = "0.4.1"
-source = "git+https://github.com/anomalyco/transcribe.cpp?rev=60bed89dab84f7c1fddc3a17ad7fa8a27ddfba19#60bed89dab84f7c1fddc3a17ad7fa8a27ddfba19"
+source = "git+https://github.com/Avyukth/transcribe.cpp?rev=8be0a43ad45cbc95b2f6848fa28304a4bcf59eac#8be0a43ad45cbc95b2f6848fa28304a4bcf59eac"
 dependencies = [
  "cmake",
  "serde_json",

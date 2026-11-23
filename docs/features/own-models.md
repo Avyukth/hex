@@ -9,11 +9,30 @@ didn't pin.
 
 ## Add A Model File
 
+Canary imports (`stt.variant: indic-transcribe-core` / `indic-transcribe-flex`)
+are imported from disk or the Hugging Face cache rather than downloaded from
+Hex's catalog: the upstream Bodhan AI weights are gated under the Indic Open
+Model License v1.0 (derived from `nvidia/canary-1b-v2`, CC BY 4.0). Hex pins a
+`transcribe.cpp` revision (`hex/indic-canary`) that supports Canary's `indic`
+prompt format, ITN mixed-script mode (`<|itn|>` / `stt.canary.default_mode`),
+`-Latn` romanized output, and built-in 1-step Auto language detection (LID).
+
+Observed benchmarks for `indic-transcribe-core-Q8_0.gguf` (1.4 GB, `Avyukth/transcribe.cpp` `hex/indic-canary`):
+- **Speed (`-r 5`):** `hi-test-16k.wav` (3.7 s, `hi`) / `whole-earth.wav` (84.4 s, `en`):
+  - CPU (`spark-12ce`, 20-core ARM): `348.4 ms` (`10x RT`) / `9,949.8 ms` (`8x RT`), load `~175 ms`.
+  - Metal (`MTL0`, Apple M3 Pro): `213.9 ms` (`17x RT`) / `4,088.0 ms` (`21x RT`), load `~150 ms`.
+  - CUDA (`CUDA0`, NVIDIA GB10): `103.5 ms` (`35x RT`) / `2,341.7 ms` (`36x RT`), load `~475 ms`; 15-clip Hindi FLEURS batch (181.0 s) in `4.73 s` (`38.3x RT`).
+- **Accuracy (CPU, NFC + punctuation-stripped single-reference WER / CER):**
+  - `google/fleurs` (`test`, 13 Indic languages × 15 clips = 195 utterances, 39.4 min): **18.38% macro WER / 6.01% macro CER** at `9.4x RT`.
+  - `ai4bharat/IndicVoices` (`valid`, 10 Indic languages × 15 clips = 150 spontaneous utterances, 15.9 min): **20.74% macro WER / 7.78% macro CER** at `9.2x RT`.
+  - Auto LID: 1-step built-in Canary LID verified on Metal (`whole-earth.wav` → `en` at `24x RT`; Hindi/Urdu remains acoustically confusable per Bodhan's `lid.py`, so supply `hi` explicitly when Devanagari is required).
+
 ```ts
 Picker header -> "Add model file…" -> native dialog (GGUF, All files)   // setup.custom-models
 ├── Header check, before anything loads (transcription::gguf_header): GGUF v2/v3;
 │   general.architecture parakeet | whisper | qwen3_asr | cohere_asr | sensevoice |
-│   gigaam (any other, e.g. llama.cpp's or SenseVoice.cpp's `sensevoice-small`,
+│   gigaam | canary (Canary includes Indic-Transcribe Core/Flex);
+│   (any other, e.g. llama.cpp's or SenseVoice.cpp's `sensevoice-small`,
 │   says the file was made for another program and needs a transcribe.cpp
 │   conversion, or the catalog's download; #1299);
 │   stt.variant; general.languages with a code Hex knows; only F32, F16, and

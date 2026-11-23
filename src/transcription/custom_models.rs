@@ -36,14 +36,24 @@ const DIGITS: usize = 16;
 const MAX_NAME_CHARS: usize = 64;
 
 /// The model families Hex's runtime handles, with the names people know.
-const ARCHITECTURES: [(&str, &str); 6] = [
+const ARCHITECTURES: [(&str, &str); 7] = [
     ("parakeet", "Parakeet"),
     ("whisper", "Whisper"),
     ("qwen3_asr", "Qwen3-ASR"),
     ("cohere_asr", "Cohere Transcribe"),
     ("sensevoice", "SenseVoice"),
     ("gigaam", "GigaAM"),
+    // Canary (FastConformer encoder + Transformer decoder), including
+    // Bodhan AI's Indic-Transcribe Core/Flex checkpoints.
+    ("canary", "Canary"),
 ];
+
+/// Whether an import has built-in 1-step Auto language detection in
+/// `Avyukth/transcribe.cpp` (`hex/indic-canary`), even if its GGUF header
+/// wrote `stt.capability.lang_detect = false`.
+fn has_indic_canary_lid(architecture: &str, variant: &str) -> bool {
+    architecture == "canary" && variant.starts_with("indic-transcribe")
+}
 
 /// Whether a family takes a language prompt: Parakeet and GigaAM heads
 /// don't (their catalog entries are the same); the other families do.
@@ -359,7 +369,8 @@ fn build(id: CustomModelId, manifest: &Manifest) -> ModelDefinition {
         // The header's lang_detect decides Auto. A no-hint family (Parakeet,
         // GigaAM) hears the language itself without a hint, the way the
         // catalog's v3-type entries do.
-        supports_language_detection: manifest.detects_language,
+        supports_language_detection: manifest.detects_language
+            || has_indic_canary_lid(architecture, &manifest.variant),
     }
 }
 
@@ -591,7 +602,7 @@ fn profile(header: &GgufHeader, file_name: &str, types: TensorTypes) -> Result<P
         bail!(
             "its architecture is {architecture}, so it was made for another program. Hex runs \
              only GGUF files converted with transcribe.cpp (Parakeet, Whisper, Qwen3-ASR, \
-             Cohere Transcribe, SenseVoice, or GigaAM); for a model in Hex's list, download \
+             Cohere Transcribe, SenseVoice, GigaAM, or Canary); for a model in Hex's list, download \
              it from the list instead"
         );
     }
@@ -636,7 +647,8 @@ fn profile(header: &GgufHeader, file_name: &str, types: TensorTypes) -> Result<P
         architecture: architecture.to_owned(),
         variant: variant.to_owned(),
         languages,
-        detects_language: header.bool("stt.capability.lang_detect"),
+        detects_language: header.bool("stt.capability.lang_detect")
+            || has_indic_canary_lid(architecture, variant),
         license: header.string("general.license").map(str::to_owned),
         repository: header.string("general.repo_url").map(str::to_owned),
         k_quants: header.uses_k_quants(),
@@ -1584,6 +1596,30 @@ mod tests {
         );
         assert!(whisper.accepts_language_hint);
         assert!(!whisper.supports_language_detection);
+    }
+
+    #[test]
+    fn a_canary_header_with_indic_languages_is_accepted_and_enables_auto_lid() {
+        let all_indic = [
+            "as", "bgc", "bhb", "bho", "bn", "brx", "doi", "en", "gu", "hi", "hne", "kn", "kok",
+            "ks", "mai", "ml", "mni", "mr", "ne", "or", "pa", "sa", "sat", "sd", "ta", "te", "ur",
+        ];
+        let header = gguf_header::tests::read_header(gguf(
+            &[
+                ("general.architecture", "canary"),
+                ("general.name", "Indic Transcribe Core"),
+                ("stt.variant", "indic-transcribe-core"),
+            ],
+            &[("general.languages", &all_indic)],
+            &[("stt.capability.lang_detect", false)],
+            &[("a", 8, 64)],
+        ));
+        let profile = profile(&header, "file", TensorTypes::STANDARD).unwrap();
+        assert_eq!(profile.architecture, "canary");
+        assert_eq!(family(&profile.architecture), "Canary");
+        assert_eq!(profile.languages, all_indic);
+        assert!(profile.detects_language);
+        assert!(takes_language_hint("canary"));
     }
 
     #[test]

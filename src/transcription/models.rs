@@ -18,7 +18,8 @@ pub use super::custom_models::CustomModelId;
 pub use super::definitions::{
     AUTO_LANGUAGE, GgufArtifact, MODELS, ModelDefinition, ModelRef, ModelRuntime, VocabularyUse,
 };
-pub use super::languages::{LANGUAGES, language_name, menu_order};
+pub(crate) use super::languages::known_language;
+pub use super::languages::{LANGUAGES, is_known_language, language_name, menu_order};
 pub(crate) use super::model_benchmarks::most_accurate_is_comparable;
 pub use super::model_benchmarks::{BenchmarkRecord, benchmark};
 
@@ -349,33 +350,6 @@ pub(crate) fn picker_models(language: &str) -> Vec<(ModelRef, Option<Recommendat
                 .map(|model| (model, None)),
         )
         .collect()
-}
-
-/// Whisper large-v3's language codes, for its `"*"` catalog entry: the local
-/// API accepts these beyond the languages Settings lists.
-const WHISPER_LANGUAGES: &[&str] = &[
-    "en", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr", "pl", "ca", "nl", "ar", "sv", "it",
-    "id", "hi", "fi", "vi", "he", "uk", "el", "ms", "cs", "ro", "da", "hu", "ta", "no", "th", "ur",
-    "hr", "bg", "lt", "la", "mi", "ml", "cy", "sk", "te", "fa", "lv", "bn", "sr", "az", "sl", "kn",
-    "et", "mk", "br", "eu", "is", "hy", "ne", "mn", "bs", "kk", "sq", "sw", "gl", "mr", "pa", "si",
-    "km", "sn", "yo", "so", "af", "oc", "ka", "be", "tg", "sd", "gu", "am", "yi", "lo", "uz", "fo",
-    "ht", "ps", "tk", "nn", "mt", "sa", "lb", "my", "bo", "tl", "mg", "as", "tt", "haw", "ln",
-    "ha", "ba", "jw", "su", "yue",
-];
-
-/// Whether `language` is a code Hex knows: one Settings lists, or one of
-/// Whisper's, which only models that accept any language support.
-pub fn is_known_language(language: &str) -> bool {
-    known_language(language).is_some()
-}
-
-/// `language` as Hex's own `'static` code, when Hex knows it.
-pub(crate) fn known_language(language: &str) -> Option<&'static str> {
-    LANGUAGES
-        .iter()
-        .map(|(code, _)| *code)
-        .chain(WHISPER_LANGUAGES.iter().copied())
-        .find(|code| *code == language)
 }
 
 /// Whether a saved selection stays saved: one `validate` accepts, or an
