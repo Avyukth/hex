@@ -560,7 +560,7 @@ mod tests {
                 system_dark: dark,
                 scale: 2.0,
             },
-            TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES),
+            TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES),
         );
         rt.settle_all();
         rt.frame(0.0);

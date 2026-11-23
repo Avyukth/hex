@@ -34,7 +34,7 @@ fn draw(gpu: &Gpu, view: fn(&Ui, &mut Cx<Ui>) -> El, scale: f32) -> (u32, u32, V
         system_dark: true,
         scale,
     };
-    let text = TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES);
+    let text = TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES);
     let mut rt = crate::rune_ui::offscreen::runtime(state, view, SIZE, env, text);
     rt.settle_all();
     rt.frame(0.0);

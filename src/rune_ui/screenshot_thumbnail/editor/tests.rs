@@ -353,7 +353,7 @@ fn ink_lands_under_the_pointer_in_the_frame_it_is_drawn() {
             system_dark: true,
             scale: 2.0,
         },
-        rune::text::TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES),
+        rune::text::TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES),
     );
     rt.frame(0.0);
     let draft = |rt: &rune::Runtime<Editor>| {
@@ -746,10 +746,7 @@ fn editor_goldens() {
                     system_dark: dark,
                     scale: 2.0,
                 },
-                rune::text::TextSystem::new(
-                    rune_theme_opencode::FONTS,
-                    rune_theme_opencode::FAMILIES,
-                ),
+                rune::text::TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES),
             );
             let (w, h) = ((SCREEN[0] * 2.0) as u32, (SCREEN[1] * 2.0) as u32);
             let pixels = crate::rune_ui::offscreen::draw(&gpu, &mut rt, w, h);
@@ -816,7 +813,7 @@ fn editor_frames() {
             system_dark: true,
             scale: 2.0,
         },
-        rune::text::TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES),
+        rune::text::TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES),
     );
     rt.frame(0.0);
     let (w, h) = ((SCREEN[0] * 2.0) as u32, (SCREEN[1] * 2.0) as u32);
@@ -931,10 +928,7 @@ fn recording_editor_snapshots() {
                 system_dark: dark,
                 scale: 2.0,
             };
-            let text = rune::text::TextSystem::new(
-                rune_theme_opencode::FONTS,
-                rune_theme_opencode::FAMILIES,
-            );
+            let text = rune::text::TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES);
             let mut rt = offscreen::runtime(editor, view::view, size, env, text);
             let (w, h) = ((size.0 * 2.0) as u32, (size.1 * 2.0) as u32);
             let pixels = offscreen::draw(&gpu, &mut rt, w, h);

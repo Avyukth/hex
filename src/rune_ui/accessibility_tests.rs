@@ -24,7 +24,7 @@ pub(super) fn runtime(scene: &str) -> Runtime<Ui> {
         system_dark: true,
         scale: 2.0,
     };
-    let text = TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES);
+    let text = TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES);
     let mut rt = offscreen::runtime(state, view, SIZE, env, text);
     rt.poll = Some(poll);
     rt.on_key = Some(on_key);

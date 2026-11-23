@@ -17,7 +17,7 @@ fn runtime(scene: &str) -> Runtime<Ui> {
             .groups
             .insert(group.id().to_string(), group == crate::labs::Group::Models);
     }
-    let text = TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES);
+    let text = TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES);
     let mut rt = crate::rune_ui::offscreen::runtime(
         state,
         view,

@@ -94,7 +94,7 @@ fn runtime_at(s: Onboard, dark: bool, reduced: bool) -> Run<Onboard> {
         system_dark: dark,
         scale: 1.0,
     };
-    let text = TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES);
+    let text = TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES);
     let now = s.now;
     let mut rt: Runtime<Onboard> =
         crate::rune_ui::offscreen::runtime(s, view, crate::rune_ui::WINDOW_SIZE, env, text);

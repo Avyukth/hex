@@ -139,7 +139,7 @@ impl Export {
                 system_dark: true,
                 scale: 1.0,
             },
-            rune::text::TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES),
+            rune::text::TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES),
         );
         Ok(crate::rune_ui::offscreen::draw(&gpu, &mut rt, w, h))
     }

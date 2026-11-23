@@ -541,8 +541,7 @@ fn render(gpu: &rune::render::Gpu, out: &std::path::Path, hz: u32) {
         system_dark: true,
         scale: SCALE,
     };
-    let text =
-        || rune::text::TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES);
+    let text = || rune::text::TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES);
     let size = (SCREEN[0], SCREEN[1]);
     let mut rendered = Rendered {
         cards: offscreen::runtime(

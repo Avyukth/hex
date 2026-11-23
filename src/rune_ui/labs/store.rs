@@ -573,7 +573,7 @@ mod tests {
             .find(|(name, _)| *name == "mac-labs")
             .unwrap()
             .1(&mut ui);
-        let text = TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES);
+        let text = TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES);
         let mut rt = offscreen::runtime(ui, view, (860.0, 560.0), Env::new(true, 2.0), text);
         settle(&mut rt);
         assert!(rt.find("chip-more").is_some());
@@ -608,8 +608,7 @@ mod tests {
                     for group in crate::labs::Group::ALL {
                         ui.settings.labs.groups.insert(group.id().to_string(), true);
                     }
-                    let text =
-                        TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES);
+                    let text = TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES);
                     let mut rt =
                         offscreen::runtime(ui, view, (980.0, 4000.0), Env::new(dark, 2.0), text);
                     rt.set_native_titlebar_band(28.0);

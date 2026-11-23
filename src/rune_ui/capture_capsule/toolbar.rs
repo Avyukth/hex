@@ -682,10 +682,7 @@ mod tests {
                         system_dark: dark,
                         scale: 2.0,
                     },
-                    rune::text::TextSystem::new(
-                        rune_theme_opencode::FONTS,
-                        rune_theme_opencode::FAMILIES,
-                    ),
+                    rune::text::TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES),
                 );
                 let (w, h) = ((SIZE.0 * 2.0) as u32, (SIZE.1 * 2.0) as u32);
                 let pixels = crate::rune_ui::offscreen::draw(&gpu, &mut rt, w, h);

@@ -338,7 +338,7 @@ fn permission(grant: Grant) -> Pres {
 }
 
 fn text() -> TextSystem {
-    TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES)
+    TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES)
 }
 
 fn env(dark: bool) -> rune::Env {

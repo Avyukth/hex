@@ -96,7 +96,7 @@ fn render(gpu: &rune::render::Gpu, cards: Cards, dark: bool) -> (u32, u32, Vec<u
             system_dark: dark,
             scale: 2.0,
         },
-        rune::text::TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES),
+        rune::text::TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES),
     );
     rt.settle_all();
     rt.frame(0.0);
@@ -274,7 +274,7 @@ fn frames(
             system_dark: true,
             scale: 2.0,
         },
-        rune::text::TextSystem::new(rune_theme_opencode::FONTS, rune_theme_opencode::FAMILIES),
+        rune::text::TextSystem::new(crate::fonts::FONTS, crate::fonts::FAMILIES),
     );
     rt.frame(0.0);
     let (w, h) = ((screen.0 * 2.0) as u32, (screen.1 * 2.0) as u32);
