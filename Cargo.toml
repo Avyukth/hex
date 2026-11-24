@@ -53,8 +53,8 @@ strip = true
 # `-Latn` romanized output, and 1-step built-in Auto LID (branch hex/indic-canary).
 # Drop this once a transcribe.cpp release carries them.
 [patch.crates-io]
-transcribe-cpp = { git = "https://github.com/Avyukth/transcribe.cpp", rev = "8be0a43ad45cbc95b2f6848fa28304a4bcf59eac" }
-transcribe-cpp-sys = { git = "https://github.com/Avyukth/transcribe.cpp", rev = "8be0a43ad45cbc95b2f6848fa28304a4bcf59eac" }
+transcribe-cpp = { git = "https://github.com/Avyukth/transcribe.cpp", rev = "60baac7a4398cd4dae0caf3f7fd7809ec6c35f48" }
+transcribe-cpp-sys = { git = "https://github.com/Avyukth/transcribe.cpp", rev = "60baac7a4398cd4dae0caf3f7fd7809ec6c35f48" }
 # The crates Rune patches in its own workspace (Rune's README, "Depending on
 # Rune"): a dependency's `[patch]` never reaches the workspace that depends on
 # it, and without these Hex builds against stock winit, sctk-adwaita,

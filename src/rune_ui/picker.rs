@@ -391,7 +391,12 @@ pub(super) fn choose(ui: &mut Ui, model: &ModelDefinition) {
         close(ui);
         return;
     }
-    let language = model.language_for(&current.language).to_owned();
+    let language =
+        if model.id == TranscriptionModelId::IndicTranscribeFlex && current.language == "en" {
+            AUTO_LANGUAGE.to_owned()
+        } else {
+            model.language_for(&current.language).to_owned()
+        };
     ui.picker.fallback = (language != current.language).then(|| LanguageFallback {
         model: model.id,
         from: current.language.clone(),
@@ -1124,5 +1129,26 @@ mod tests {
         open(&mut ui);
         assert_eq!(ui.picker.sort, Sort::Recommended);
         assert!(!ui.picker.supported_only);
+    }
+
+    #[test]
+    fn choosing_indic_transcribe_flex_from_english_switches_to_auto() {
+        let mut settings = AppSettings::default();
+        settings.transcription.model = TranscriptionModelId::ParakeetUnifiedEnglish;
+        settings.transcription.language = "en".into();
+        let mut ui = Ui::with(settings, super::super::Service::Fixture(Vec::new()));
+        let flex = transcription_models::definition(TranscriptionModelId::IndicTranscribeFlex);
+        choose(&mut ui, &flex);
+        assert!(matches!(
+            &ui.service,
+            super::super::Service::Fixture(sent)
+                if matches!(
+                    sent.as_slice(),
+                    [Request::ChooseModel {
+                        model: TranscriptionModelId::IndicTranscribeFlex,
+                        language,
+                    }] if language == AUTO_LANGUAGE
+                )
+        ));
     }
 }
